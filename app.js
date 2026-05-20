@@ -73,13 +73,13 @@ const activityFeed = document.getElementById('activity-feed');
 
 // Standard Premium Mock Data
 const MOCK_SPOOLS = [
-    { id: 'sp-1', brand: 'Prusament', material: 'PLA', color: 'Galaxy Black', hex: '#111215', remWeight: 820, totalWeight: 1000, location: 'Drybox A', diameter: '1.75', notes: 'Gorgeous metallic sparkle, print temp: 215C' },
-    { id: 'sp-2', brand: 'Polymaker', material: 'PETG', color: 'Teal Blue', hex: '#00a3a6', remWeight: 680, totalWeight: 1000, location: 'Shelf 1', diameter: '1.75', notes: 'Sturdy, good bed adhesion at 80C, nozzle 240C' },
-    { id: 'sp-3', brand: 'Hatchbox', material: 'PLA', color: 'Fire Red', hex: '#d01c1c', remWeight: 180, totalWeight: 1000, location: 'Drybox B', diameter: '1.75', notes: 'Low stock! Flow rate 0.98. Standard everyday red' },
-    { id: 'sp-4', brand: 'Polymaker', material: 'TPU', color: 'Neon Green', hex: '#39ff14', remWeight: 450, totalWeight: 750, location: 'Shelf 2', diameter: '1.75', notes: '95A hardness, print slowly (25mm/s)' },
-    { id: 'sp-5', brand: 'eSUN', material: 'ABS', color: 'Cool Gray', hex: '#808588', remWeight: 950, totalWeight: 1000, location: 'Enclosure Drawer', diameter: '1.75', notes: 'Acetone vapor smoothing works perfectly' },
-    { id: 'sp-6', brand: 'MatterHackers', material: 'Nylon', color: 'Natural White', hex: '#f0f2f5', remWeight: 120, totalWeight: 1000, location: 'Drybox A', diameter: '1.75', notes: 'Requires drying before use. Super tough structural parts.' },
-    { id: 'sp-7', brand: 'Fiberlogy', material: 'ASA', color: 'Graphite Grey', hex: '#44464a', remWeight: 720, totalWeight: 750, location: 'Shelf 1', diameter: '1.75', notes: 'UV resistant, exterior parts' }
+    { id: 'sp-1', brand: 'Prusament', material: 'PLA', color: 'Galaxy Black', hex: '#111215', qty: 3, reorder: 1, location: 'Drybox A', notes: 'Gorgeous metallic sparkle, print temp: 215C' },
+    { id: 'sp-2', brand: 'Polymaker', material: 'PETG', color: 'Teal Blue', hex: '#00a3a6', qty: 2, reorder: 1, location: 'Shelf 1', notes: 'Sturdy, good bed adhesion at 80C, nozzle 240C' },
+    { id: 'sp-3', brand: 'Hatchbox', material: 'PLA', color: 'Fire Red', hex: '#d01c1c', qty: 0, reorder: 1, location: 'Drybox B', notes: 'Out of stock! Flow rate 0.98. Standard everyday red' },
+    { id: 'sp-4', brand: 'Polymaker', material: 'TPU', color: 'Neon Green', hex: '#39ff14', qty: 1, reorder: 1, location: 'Shelf 2', notes: '95A hardness, print slowly (25mm/s)' },
+    { id: 'sp-5', brand: 'eSUN', material: 'ABS', color: 'Cool Gray', hex: '#808588', qty: 4, reorder: 2, location: 'Enclosure Drawer', notes: 'Acetone vapor smoothing works perfectly' },
+    { id: 'sp-6', brand: 'MatterHackers', material: 'Nylon', color: 'Natural White', hex: '#f0f2f5', qty: 1, reorder: 1, location: 'Drybox A', notes: 'Requires drying before use. Super tough structural parts.' },
+    { id: 'sp-7', brand: 'Fiberlogy', material: 'ASA', color: 'Graphite Grey', hex: '#44464a', qty: 2, reorder: 1, location: 'Shelf 1', notes: 'UV resistant, exterior parts' }
 ];
 
 const MOCK_HARDWARE = [
@@ -188,12 +188,41 @@ function loadDatabase() {
         cloudAutoSyncToggle.checked = savedAutoSync;
     }
 
+    // Automatically migrate old weight-based schema to new quantity-based schema
+    let migrated = false;
+    if (spools.length > 0) {
+        spools = spools.map(sp => {
+            if (sp.qty === undefined) {
+                migrated = true;
+                const rem = parseFloat(sp.remWeight) || 0;
+                const tot = parseFloat(sp.totalWeight) || 1000;
+                const guessedQty = rem > 0 ? Math.ceil(rem / tot) || 1 : 0;
+                
+                return {
+                    id: sp.id,
+                    brand: sp.brand || 'Generic',
+                    material: sp.material || 'PLA',
+                    color: sp.color || 'Default',
+                    hex: sp.hex || '#6366f1',
+                    qty: guessedQty,
+                    reorder: rem <= 250 && rem > 0 ? guessedQty : 1,
+                    location: sp.location || '',
+                    notes: sp.notes || ''
+                };
+            }
+            return sp;
+        });
+    }
+
     // If database is completely empty (first run), seed with mock data
     if (spools.length === 0 && hardware.length === 0) {
         spools = [...MOCK_SPOOLS];
         hardware = [...MOCK_HARDWARE];
         saveDatabase();
         logActivity('Initialized inventory with beautiful mock database demo data', 'info');
+    } else if (migrated) {
+        saveDatabase();
+        logActivity('Successfully migrated local database to quantity-based spool schema', 'success');
     }
 
     // Update dynamic filters based on loaded data
@@ -254,14 +283,13 @@ function renderAll() {
 }
 
 function renderDashboardStats() {
-    // 1. Spools Total Weight
-    const totalGrams = spools.reduce((acc, sp) => acc + (parseFloat(sp.remWeight) || 0), 0);
-    const totalKg = (totalGrams / 1000).toFixed(1);
-    dashTotalWeight.innerText = `${totalKg} kg`;
-    dashSpoolsCount.innerText = `${spools.length} spools in stock`;
+    // 1. Spools Total Quantity
+    const totalSpoolsQty = spools.reduce((acc, sp) => acc + (parseInt(sp.qty) || 0), 0);
+    dashTotalWeight.innerText = `${totalSpoolsQty} spools`;
+    dashSpoolsCount.innerText = `${spools.length} unique color/materials`;
 
-    // 2. Low Spools Alert (< 250g remaining and not marked completely empty)
-    const lowSpoolsCount = spools.filter(sp => sp.remWeight <= 250 && sp.remWeight > 0).length;
+    // 2. Low Spools Alert (qty <= reorder limit)
+    const lowSpoolsCount = spools.filter(sp => (parseInt(sp.qty) || 0) <= (parseInt(sp.reorder) || 0)).length;
     dashLowSpools.innerText = lowSpoolsCount;
     const alertCard = dashLowSpools.closest('.stat-card');
     if (lowSpoolsCount > 0) {
@@ -293,11 +321,11 @@ function renderDashboardStats() {
 function updateDashboardCharts() {
     if (!materialBarChart) return;
     
-    // Sum weights by material type
+    // Sum quantities by material type
     const distribution = {};
     spools.forEach(sp => {
         const mat = sp.material || 'Other';
-        distribution[mat] = (distribution[mat] || 0) + (parseFloat(sp.remWeight) || 0);
+        distribution[mat] = (distribution[mat] || 0) + (parseInt(sp.qty) || 0);
     });
 
     // Check if empty
@@ -306,26 +334,25 @@ function updateDashboardCharts() {
         return;
     }
 
-    // Find maximum weight to calculate percentages
-    const maxWeight = Math.max(...Object.values(distribution), 1000);
+    // Find maximum quantity to calculate percentages
+    const maxQty = Math.max(...Object.values(distribution), 5);
 
     // Build the visual rows dynamically
     materialBarChart.innerHTML = '';
     
-    // Sort materials by total weight descending
+    // Sort materials by total quantity descending
     const sortedMaterials = Object.entries(distribution).sort((a, b) => b[1] - a[1]);
 
-    sortedMaterials.forEach(([material, weight]) => {
+    sortedMaterials.forEach(([material, qty]) => {
         const row = document.createElement('div');
         row.className = 'chart-row';
         
-        const percentage = Math.min((weight / maxWeight) * 100, 100);
-        const kgVal = (weight / 1000).toFixed(2);
+        const percentage = Math.min((qty / maxQty) * 100, 100);
         
         row.innerHTML = `
             <div class="chart-row-meta">
                 <span class="chart-material-label">${material}</span>
-                <span class="chart-weight-value">${kgVal} kg (${weight}g)</span>
+                <span class="chart-weight-value">${qty} ${qty === 1 ? 'spool' : 'spools'}</span>
             </div>
             <div class="chart-bar-outer">
                 <div class="chart-bar-inner" style="width: 0%; background: linear-gradient(to right, var(--primary), var(--secondary))"></div>
@@ -362,12 +389,14 @@ function renderSpools() {
 
         // Status match
         let matchesStatus = true;
+        const qty = parseInt(sp.qty) || 0;
+        const reorder = parseInt(sp.reorder) || 0;
         if (statusFilter === 'active') {
-            matchesStatus = sp.remWeight > 0;
+            matchesStatus = qty > reorder;
         } else if (statusFilter === 'low') {
-            matchesStatus = sp.remWeight <= 250 && sp.remWeight > 0;
+            matchesStatus = qty <= reorder && qty > 0;
         } else if (statusFilter === 'empty') {
-            matchesStatus = sp.remWeight <= 0;
+            matchesStatus = qty <= 0;
         }
 
         return matchesSearch && matchesMaterial && matchesStatus;
@@ -388,23 +417,24 @@ function renderSpools() {
     filtered.forEach(sp => {
         const card = document.createElement('div');
         card.className = 'spool-card glass-panel';
+        card.setAttribute('style', `--accent-color: ${sp.hex}; --glow-color: ${sp.hex}0a;`);
         
-        const remWeight = parseFloat(sp.remWeight) || 0;
-        const totalWeight = parseFloat(sp.totalWeight) || 1000;
-        const pct = Math.max(Math.round((remWeight / totalWeight) * 100), 0);
-        
-        // Gauge stroke dash offset calculation
-        // Total dasharray = 220 (approx circle circumference of radius 35)
-        const offset = 220 - (220 * pct) / 100;
-        
-        // Pick high fidelity progress bar color based on percentage
-        let accentColor = 'var(--primary)';
-        if (pct < 15) accentColor = 'var(--danger)';
-        else if (pct < 35) accentColor = 'var(--warning)';
+        const qty = parseInt(sp.qty) || 0;
+        const reorder = parseInt(sp.reorder) || 0;
+
+        // Define stock levels
+        let statusLabel = 'In Stock';
+        let statusClass = 'good';
+        if (qty <= 0) {
+            statusLabel = 'Out of Stock';
+            statusClass = 'out';
+        } else if (qty <= reorder) {
+            statusLabel = 'Low Stock';
+            statusClass = 'low';
+        }
 
         // Location / shelf string
         const locationStr = sp.location ? sp.location : 'N/A';
-        const diameterStr = sp.diameter ? `${sp.diameter}mm` : '1.75mm';
 
         card.innerHTML = `
             <div class="spool-card-actions">
@@ -421,77 +451,67 @@ function renderSpools() {
                     <span class="spool-brand">${sp.brand}</span>
                     <span class="spool-material-badge">${sp.material}</span>
                 </div>
-                <div class="spool-color-circle" style="background-color: ${sp.hex || '#ccc'}" title="Hex Color: ${sp.hex || 'None'}"></div>
+                <span class="status-pill ${statusClass}">
+                    <span class="status-indicator"></span>
+                    <span>${statusLabel}</span>
+                </span>
             </div>
 
             <div class="spool-visual-section">
-                <!-- Circular gauge -->
-                <div class="spool-gauge-wrapper">
-                    <svg class="spool-gauge-svg" width="72" height="72" viewBox="0 0 80 80">
-                        <circle class="spool-gauge-track" cx="40" cy="40" r="35"></circle>
-                        <circle class="spool-gauge-fill" cx="40" cy="40" r="35" 
-                                style="stroke: ${accentColor}; stroke-dashoffset: 220;"></circle>
+                <!-- Large vector avatar spinning slow on hover -->
+                <div class="spool-avatar-wrapper" style="background: radial-gradient(circle, ${sp.hex}22, ${sp.hex}05); border: 1.5px solid ${sp.hex}30; box-shadow: 0 8px 20px ${sp.hex}18;">
+                    <svg class="spool-avatar-icon" viewBox="0 0 24 24" fill="none" stroke="${sp.hex}" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5.64 5.64l1.42 1.42M16.94 16.94l1.42 1.42M5.64 18.36l1.42-1.42M16.94 7.06l1.42-1.42"></path>
                     </svg>
-                    <div class="spool-gauge-text">
-                        <span class="gauge-pct">${pct}%</span>
-                    </div>
                 </div>
 
                 <div class="spool-details-list">
                     <div class="spool-detail-row">
                         <span>Color:</span>
-                        <span class="spool-detail-value">${sp.color}</span>
+                        <span class="spool-detail-value" style="color: ${sp.hex}; font-weight: 700;">${sp.color}</span>
                     </div>
                     <div class="spool-detail-row">
                         <span>Cabinet:</span>
                         <span class="spool-detail-value">${locationStr}</span>
                     </div>
                     <div class="spool-detail-row">
-                        <span>Diameter:</span>
-                        <span class="spool-detail-value">${diameterStr}</span>
+                        <span>Alert Limit:</span>
+                        <span class="spool-detail-value">&le; ${reorder} units</span>
                     </div>
                 </div>
             </div>
 
-            <div class="spool-weight-numbers">
-                <div class="weight-rem">${remWeight}g</div>
-                <div class="weight-total">/ ${totalWeight}g net</div>
-            </div>
-
-            <!-- Double visual indicator -->
-            <div class="spool-progress-outer">
-                <div class="spool-progress-inner" style="width: 0%; background-color: ${accentColor};"></div>
+            <div class="spool-weight-numbers" style="margin-top: auto; margin-bottom: 16px; align-items: center; justify-content: space-between;">
+                <div class="weight-rem" style="font-size: 22px; line-height: 1;">${qty} ${qty === 1 ? 'spool' : 'spools'}</div>
+                <!-- Interactive spool quantity counters -->
+                <div class="spool-counter">
+                    <button class="spool-counter-btn spool-dec" data-id="${sp.id}">-</button>
+                    <span class="spool-counter-val">${qty}</span>
+                    <button class="spool-counter-btn spool-inc" data-id="${sp.id}">+</button>
+                </div>
             </div>
 
             <!-- Notes Section if exists -->
-            ${sp.notes ? `<div style="font-size:11.5px; color:var(--text-muted); font-style:italic; line-height:1.4; margin-bottom: 16px; display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${sp.notes}">${sp.notes}</div>` : ''}
-
-            <!-- Quick decrement interface -->
-            <div class="spool-actions-panel">
-                <button class="deduct-btn deduct-filament" data-id="${sp.id}" data-amount="50">-50g</button>
-                <button class="deduct-btn deduct-filament" data-id="${sp.id}" data-amount="100">-100g</button>
-                <button class="deduct-btn deduct-filament" data-id="${sp.id}" data-amount="250">-250g</button>
-                <button class="deduct-btn deduct-filament" data-id="${sp.id}" data-amount="reset" style="flex:0.8;">Zero</button>
-            </div>
+            ${sp.notes ? `<div style="font-size:11.5px; color:var(--text-muted); font-style:italic; line-height:1.4; margin-bottom: 0px; display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${sp.notes}">${sp.notes}</div>` : ''}
         `;
         
         spoolsContainer.appendChild(card);
-        
-        // Animate remaining weight charts on paint
-        setTimeout(() => {
-            const fillCircle = card.querySelector('.spool-gauge-fill');
-            const fillBar = card.querySelector('.spool-progress-inner');
-            if (fillCircle) fillCircle.style.strokeDashoffset = offset;
-            if (fillBar) fillBar.style.width = `${pct}%`;
-        }, 50);
     });
 
     // Wire up events dynamically
-    document.querySelectorAll('.deduct-filament').forEach(btn => {
+    document.querySelectorAll('.spool-inc').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const id = e.target.getAttribute('data-id');
-            const amount = e.target.getAttribute('data-amount');
-            deductFilament(id, amount);
+            changeSpoolQty(id, 1);
+        });
+    });
+
+    document.querySelectorAll('.spool-dec').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.getAttribute('data-id');
+            changeSpoolQty(id, -1);
         });
     });
 
@@ -650,20 +670,17 @@ function renderHardware() {
 // DATA MUTATIONS & QUICK ACTIONS
 // ==========================================================================
 
-function deductFilament(id, amount) {
+function changeSpoolQty(id, diff) {
     const spoolIndex = spools.findIndex(sp => sp.id === id);
     if (spoolIndex === -1) return;
 
     const spool = spools[spoolIndex];
-    let originalWeight = spool.remWeight;
+    spool.qty = Math.max((parseInt(spool.qty) || 0) + diff, 0);
 
-    if (amount === 'reset') {
-        spool.remWeight = 0;
-        logActivity(`Spool "${spool.brand} ${spool.color}" marked as completely empty`, 'warning');
+    if (spool.qty <= spool.reorder && (spool.qty - diff) > spool.reorder) {
+        logActivity(`Low stock warning! Spool "${spool.brand} ${spool.color}" down to ${spool.qty} spools`, 'warning');
     } else {
-        const deductVal = parseInt(amount) || 0;
-        spool.remWeight = Math.max(spool.remWeight - deductVal, 0);
-        logActivity(`Deducted ${deductVal}g from "${spool.brand} ${spool.color}" (Remaining: ${spool.remWeight}g)`, 'info');
+        logActivity(`Updated inventory count of "${spool.brand} ${spool.color}" by ${diff > 0 ? '+' : ''}${diff} (Current: ${spool.qty})`, 'info');
     }
 
     renderAll();
@@ -835,10 +852,9 @@ function openEditSpoolModal(id) {
     document.getElementById('spool-color').value = sp.color;
     document.getElementById('spool-hex').value = sp.hex;
     spoolColorPicker.value = sp.hex || '#6366f1';
-    document.getElementById('spool-total-weight').value = sp.totalWeight;
-    document.getElementById('spool-rem-weight').value = sp.remWeight;
+    document.getElementById('spool-qty').value = sp.qty !== undefined ? sp.qty : 1;
+    document.getElementById('spool-reorder').value = sp.reorder !== undefined ? sp.reorder : 1;
     document.getElementById('spool-location').value = sp.location || '';
-    document.getElementById('spool-diameter').value = sp.diameter || '1.75';
     document.getElementById('spool-notes').value = sp.notes || '';
 
     modalSpool.showModal();
@@ -851,10 +867,9 @@ function saveSpoolForm() {
         material: document.getElementById('spool-material').value,
         color: document.getElementById('spool-color').value.trim(),
         hex: document.getElementById('spool-hex').value.trim() || '#6366f1',
-        totalWeight: parseInt(document.getElementById('spool-total-weight').value) || 1000,
-        remWeight: parseInt(document.getElementById('spool-rem-weight').value) || 1000,
+        qty: parseInt(document.getElementById('spool-qty').value) || 0,
+        reorder: parseInt(document.getElementById('spool-reorder').value) || 0,
         location: document.getElementById('spool-location').value.trim(),
-        diameter: document.getElementById('spool-diameter').value,
         notes: document.getElementById('spool-notes').value.trim()
     };
 
@@ -1110,15 +1125,14 @@ function runCSVImport(csvText) {
             const material = row['material'] || 'PLA';
             const color = row['color'] || 'Generic Color';
             const hex = row['hexcode'] || row['hex'] || '#6366f1';
-            const remWeight = parseInt(row['remainingweight'] || row['remweight'] || row['weight']) || 1000;
-            const totalWeight = parseInt(row['totalweight'] || row['weightnet']) || 1000;
+            const qty = parseInt(row['quantity'] || row['qty'] || row['count'] || row['spools']) || 1;
+            const reorder = parseInt(row['reorderlimit'] || row['reorder'] || row['alert']) || 1;
             const location = row['shelf'] || row['location'] || 'Storage Box';
-            const diameter = row['diameter'] || '1.75';
             const notes = row['notes'] || row['comment'] || '';
 
             return {
                 id: `sp-import-${Date.now()}-${index}`,
-                brand, material, color, hex, remWeight, totalWeight, location, diameter, notes
+                brand, material, color, hex, qty, reorder, location, notes
             };
         });
 
@@ -1170,9 +1184,9 @@ function exportCSVFile(dataArray, filename) {
     // Header string
     // Format headers user friendly for Google Sheets
     const headersLine = keys.map(k => {
-        // Capitalize for Sheets presentation
-        if (k === 'remWeight') return 'RemainingWeight';
-        if (k === 'totalWeight') return 'TotalWeight';
+        if (k === 'hex') return 'HexCode';
+        if (k === 'qty') return 'Quantity';
+        if (k === 'reorder') return 'ReorderLimit';
         return k.charAt(0).toUpperCase() + k.slice(1);
     }).join(',');
 
@@ -1298,10 +1312,9 @@ async function fetchFromCloud() {
                         material: sp.material || 'PLA',
                         color: sp.color || 'Default',
                         hex: sp.hex || '#6366f1',
-                        remWeight: Number(sp.remWeight) || 0,
-                        totalWeight: Number(sp.totalWeight) || 1000,
+                        qty: Number(sp.qty) || 0,
+                        reorder: Number(sp.reorder) || 0,
                         location: sp.location || '',
-                        diameter: sp.diameter || '1.75',
                         notes: sp.notes || ''
                     }));
                 }
@@ -1362,10 +1375,9 @@ async function pushToCloud(isAutoSync = false) {
                 material: sp.material,
                 color: sp.color,
                 hex: sp.hex,
-                remWeight: sp.remWeight,
-                totalWeight: sp.totalWeight,
+                qty: Number(sp.qty) || 0,
+                reorder: Number(sp.reorder) || 0,
                 location: sp.location,
-                diameter: sp.diameter,
                 notes: sp.notes
             })),
             hardware: hardware.map(hw => ({

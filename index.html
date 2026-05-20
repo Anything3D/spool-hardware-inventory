@@ -108,7 +108,7 @@
                             <div class="stat-details">
                                 <h3>Filament Alerts</h3>
                                 <div class="stat-number" id="dash-low-spools">0</div>
-                                <span class="stat-label">Spools below 250g remaining</span>
+                                <span class="stat-label" id="dash-spools-alert-label">Spools below alert level</span>
                             </div>
                         </div>
 
@@ -182,9 +182,9 @@
                             </select>
                             <select id="filter-spool-status" class="select-filter">
                                 <option value="all">All Statuses</option>
-                                <option value="active">Active/In-Use</option>
-                                <option value="low">Low Stock (< 250g)</option>
-                                <option value="empty">Empty/Archived</option>
+                                <option value="active">In Stock</option>
+                                <option value="low">Low Stock</option>
+                                <option value="empty">Out of Stock</option>
                             </select>
                             <button class="primary-btn" id="btn-add-spool">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -327,7 +327,7 @@
 
                             <div class="form-group">
                                 <label>Copy & Paste CSV Data:</label>
-                                <textarea id="csv-import-text" placeholder="Paste Google Sheet CSV content here...&#10;e.g. Brand,Material,Color,HexCode,RemainingWeight,TotalWeight,Shelf&#10;Prusament,PLA,Galaxy Black,#111111,750,1000,A1"></textarea>
+                                <textarea id="csv-import-text" placeholder="Paste Google Sheet CSV content here...&#10;e.g. Brand,Material,Color,HexCode,Quantity,ReorderLimit,Shelf&#10;Prusament,PLA,Galaxy Black,#111111,2,1,A1"></textarea>
                             </div>
 
                             <div class="or-separator"><span>OR</span></div>
@@ -388,10 +388,10 @@
                                     <span class="code-badge">Material</span>
                                     <span class="code-badge">Color</span>
                                     <span class="code-badge">HexCode</span>
-                                    <span class="code-badge">RemainingWeight</span>
-                                    <span class="code-badge">TotalWeight</span>
-                                    <span class="code-badge">ThreadSize</span>
                                     <span class="code-badge">Quantity</span>
+                                    <span class="code-badge">ReorderLimit</span>
+                                    <span class="code-badge">Location</span>
+                                    <span class="code-badge">Notes</span>
                                 </div>
                             </div>
 
@@ -460,12 +460,12 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="spool-total-weight">Total Weight (Net g) *</label>
-                        <input type="number" id="spool-total-weight" min="10" placeholder="e.g., 1000" value="1000" required>
+                        <label for="spool-qty">Quantity in Stock *</label>
+                        <input type="number" id="spool-qty" min="0" placeholder="e.g., 2" value="1" required>
                     </div>
                     <div class="form-group">
-                        <label for="spool-rem-weight">Remaining Weight (g) *</label>
-                        <input type="number" id="spool-rem-weight" min="0" placeholder="e.g., 850" value="1000" required>
+                        <label for="spool-reorder">Low Stock Alert Level *</label>
+                        <input type="number" id="spool-reorder" min="0" placeholder="e.g., 1" value="1" required>
                     </div>
                 </div>
 
@@ -473,13 +473,6 @@
                     <div class="form-group">
                         <label for="spool-location">Storage Location / Shelf</label>
                         <input type="text" id="spool-location" placeholder="e.g., Drybox A, Shelf 2">
-                    </div>
-                    <div class="form-group">
-                        <label for="spool-diameter">Filament Diameter</label>
-                        <select id="spool-diameter">
-                            <option value="1.75">1.75 mm</option>
-                            <option value="2.85">2.85 mm</option>
-                        </select>
                     </div>
                 </div>
 
