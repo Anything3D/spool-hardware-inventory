@@ -133,6 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render initially
     renderAll();
     suppressAutoSync = false;
+
+    // Automatically trigger cloud pull on startup if a valid URL is pre-filled
+    const startupUrl = cloudApiUrlInput ? cloudApiUrlInput.value.trim() : '';
+    if (startupUrl) {
+        setTimeout(() => {
+            fetchFromCloud();
+        }, 300);
+    }
 });
 
 // Switch Tab Router
@@ -178,11 +186,18 @@ function loadDatabase() {
     updateThemeToggleIcon();
 
     // Load Cloud Sync settings
-    const savedCloudUrl = localStorage.getItem('nexis_cloud_url') || '';
-    const savedAutoSync = localStorage.getItem('nexis_cloud_auto_sync') === 'true';
+    const defaultCloudUrl = 'https://script.google.com/macros/s/AKfycbyv741_V2lF6bcEne1YeS3gpGVkqqF-PnR7tv0zwji0iCX5XRkpTf2wQeh2qc2O639B/exec';
+    const savedCloudUrl = localStorage.getItem('nexis_cloud_url') || defaultCloudUrl;
+    const savedAutoSync = localStorage.getItem('nexis_cloud_auto_sync') !== 'false';
     
     if (cloudApiUrlInput) {
         cloudApiUrlInput.value = savedCloudUrl;
+        if (!localStorage.getItem('nexis_cloud_url')) {
+            localStorage.setItem('nexis_cloud_url', defaultCloudUrl);
+        }
+        if (localStorage.getItem('nexis_cloud_auto_sync') === null) {
+            localStorage.setItem('nexis_cloud_auto_sync', 'true');
+        }
     }
     if (cloudAutoSyncToggle) {
         cloudAutoSyncToggle.checked = savedAutoSync;
