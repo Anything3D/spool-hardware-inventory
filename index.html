@@ -208,25 +208,27 @@
                     <div class="view-header-row">
                         <div class="view-header">
                             <h1>Hardware & Fasteners</h1>
-                            <p class="subtitle">Manage screws, nuts, inserts, bearings, and structural stock levels</p>
+                            <p class="subtitle">Manage screws, nuts, inserts, bearings, and workshop fasteners</p>
                         </div>
                         <div class="header-filters">
                             <select id="filter-hardware-type" class="select-filter">
-                                <option value="all">All Types</option>
+                                <option value="all">All Categories</option>
+                                <option value="Magnet">Magnets</option>
+                                <option value="Threaded Insert">Threaded Inserts</option>
+                                <option value="NFC Card">NFC Cards</option>
+                                <option value="Limit Switch">Limit Switches</option>
                                 <option value="Screw">Screws / Bolts</option>
-                                <option value="Nut">Nuts / Locknuts</option>
-                                <option value="Insert">Heat-set Inserts</option>
+                                <option value="Nut">Nuts</option>
                                 <option value="Bearing">Bearings</option>
-                                <option value="Washer">Washers</option>
                                 <option value="Other">Other Parts</option>
                             </select>
                             <select id="filter-hardware-size" class="select-filter">
-                                <option value="all">All Sizes</option>
-                                <option value="M2">M2</option>
+                                <option value="all">All Specs</option>
                                 <option value="M3">M3</option>
                                 <option value="M4">M4</option>
                                 <option value="M5">M5</option>
-                                <option value="M8">M8</option>
+                                <option value="Magnet">Magnet</option>
+                                <option value="NFC Card">NFC Card</option>
                                 <option value="other">Other/Non-metric</option>
                             </select>
                             <button class="primary-btn" id="btn-add-hardware">
@@ -236,18 +238,43 @@
                         </div>
                     </div>
 
+                    <!-- Cabinet Storage Unit Grid Map -->
+                    <div id="hardware-cabinet-section" class="glass-panel cabinet-section-card purple-glow" style="padding: 24px; margin-bottom: 24px;">
+                        <div class="cabinet-section-header">
+                            <div>
+                                <h2 class="cabinet-title">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+                                    <span>Cabinet Organizer Map (5x4 Drawer Grid)</span>
+                                </h2>
+                                <p class="cabinet-subtitle">Click an occupied box to filter the table, or click an empty box (+) to add new hardware.</p>
+                            </div>
+                            
+                            <!-- Dynamic selector rendered by JS -->
+                            <div id="cabinet-section-selector" class="cabinet-tab-row">
+                                <!-- Programmatically populated like: [Section A] [Section B] [Section C] etc. -->
+                            </div>
+                        </div>
+
+                        <!-- Dynamic 5x4 Grid Container -->
+                        <div id="cabinet-grid-container" class="cabinet-grid">
+                            <!-- Drawers dynamically rendered by JS -->
+                        </div>
+                    </div>
+
                     <!-- Hardware Table Container -->
                     <div class="table-card glass-panel">
                         <div class="table-responsive">
                             <table class="premium-table">
                                 <thead>
                                     <tr>
-                                        <th>Part Name</th>
-                                        <th>Type</th>
-                                        <th>Thread Size</th>
-                                        <th>Length / Dimensions</th>
-                                        <th>Material & Grade</th>
-                                        <th class="text-center">Stock Level</th>
+                                        <th>Box No.</th>
+                                        <th>Category</th>
+                                        <th>Specification</th>
+                                        <th class="text-center">Size (L/D)</th>
+                                        <th class="text-center">Size (W)</th>
+                                        <th class="text-center">Size (T)</th>
+                                        <th class="text-center">Qty</th>
+                                        <th>Remarks</th>
                                         <th class="text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -501,69 +528,58 @@
             <form id="form-hardware" method="dialog">
                 <input type="hidden" id="hardware-id">
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hw-boxNo">Box No. / Location *</label>
+                        <input type="text" id="hw-boxNo" placeholder="e.g., A1, B12, C4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hw-category">Category *</label>
+                        <input type="text" id="hw-category" list="category-suggestions" placeholder="e.g., Magnet, Threaded Insert, NFC Card" required>
+                        <datalist id="category-suggestions">
+                            <option value="Magnet">
+                            <option value="Threaded Insert">
+                            <option value="NFC Card">
+                            <option value="Limit Switch">
+                            <option value="Screw">
+                            <option value="Nut">
+                            <option value="Bearing">
+                            <option value="Washer">
+                            <option value="Spacer">
+                            <option value="Other">
+                        </datalist>
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label for="hw-name">Part Title / Identifier *</label>
-                    <input type="text" id="hw-name" placeholder="e.g., M3x12 Button Head Socket Cap Screws" required>
+                    <label for="hw-specification">Specification *</label>
+                    <input type="text" id="hw-specification" placeholder="e.g., M3, NFC Card Standard, 608ZZ" required>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="hw-type">Fastener Category *</label>
-                        <select id="hw-type" required>
-                            <option value="Screw">Screw / Bolt</option>
-                            <option value="Nut">Nut / Locknut</option>
-                            <option value="Insert">Heat-set Insert</option>
-                            <option value="Bearing">Bearing</option>
-                            <option value="Washer">Washer</option>
-                            <option value="Spacer">Spacer / Standoff</option>
-                            <option value="Other">Other Hardware</option>
-                        </select>
+                        <label for="hw-sizeLD">Size: Length / Diameter (mm)</label>
+                        <input type="text" id="hw-sizeLD" placeholder="e.g., 6, 4.2, 25 or N/A">
                     </div>
                     <div class="form-group">
-                        <label for="hw-size">Thread Size / Metric Standard</label>
-                        <select id="hw-size">
-                            <option value="M3">M3</option>
-                            <option value="M4">M4</option>
-                            <option value="M5">M5</option>
-                            <option value="M2">M2</option>
-                            <option value="M2.5">M2.5</option>
-                            <option value="M6">M6</option>
-                            <option value="M8">M8</option>
-                            <option value="N/A">N/A (Non-threaded / Other)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="hw-length">Length / Height (mm)</label>
-                        <input type="text" id="hw-length" placeholder="e.g., 12, 16, 20 or N/A">
+                        <label for="hw-sizeW">Size: Width (mm)</label>
+                        <input type="text" id="hw-sizeW" placeholder="e.g., 5.8 (leave blank if empty)">
                     </div>
                     <div class="form-group">
-                        <label for="hw-head">Head / Socket Type</label>
-                        <input type="text" id="hw-head" placeholder="e.g., Button Head, Socket Cap, Hex Nut, N/A">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="hw-material">Material & Grade</label>
-                        <input type="text" id="hw-material" placeholder="e.g., Stainless Steel A2, Black Alloy 12.9, Brass">
-                    </div>
-                    <div class="form-group">
-                        <label for="hw-location">Storage Box / Bin #</label>
-                        <input type="text" id="hw-location" placeholder="e.g., Bin 14, Box C">
+                        <label for="hw-sizeT">Size: Thickness / Height (mm)</label>
+                        <input type="text" id="hw-sizeT" placeholder="e.g., 3, 4, 6.5">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="hw-qty">Quantity in Stock *</label>
-                        <input type="number" id="hw-qty" min="0" placeholder="e.g., 150" value="100" required>
+                        <input type="text" id="hw-qty" placeholder="e.g., 45, 100+" required>
+                        <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Supports numbers (45) and string indicators (100+).</span>
                     </div>
                     <div class="form-group">
-                        <label for="hw-reorder">Low Stock Alert Level *</label>
-                        <input type="number" id="hw-reorder" min="0" placeholder="e.g., 20" value="20" required>
+                        <label for="hw-remarks">Remarks</label>
+                        <input type="text" id="hw-remarks" placeholder="e.g., Sticker type, brass finish">
                     </div>
                 </div>
 

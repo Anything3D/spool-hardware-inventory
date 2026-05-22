@@ -12,6 +12,11 @@ let suppressAutoSync = false;
 let autoSyncTimer = null;
 let hasFetchedFromCloud = false;
 
+// Modular Cabinet Map Configuration
+const CABINET_SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F'];
+let activeCabinetSection = 'A';
+let activeCabinetFilter = null;
+
 // DOM Elements
 const views = document.querySelectorAll('.app-view');
 const navButtons = document.querySelectorAll('.nav-btn');
@@ -84,15 +89,15 @@ const MOCK_SPOOLS = [
 ];
 
 const MOCK_HARDWARE = [
-    { id: 'hw-1', name: 'M3x12 Button Head Screws', type: 'Screw', size: 'M3', length: '12', head: 'Button Head Hex', material: 'Stainless Steel A2', location: 'Organizer Bin A1', qty: 150, reorder: 30 },
-    { id: 'hw-2', name: 'M3x8 Socket Cap Bolts', type: 'Screw', size: 'M3', length: '8', head: 'Socket Cap Hex', material: 'Alloy Steel 12.9 (Black)', location: 'Organizer Bin A2', qty: 12, reorder: 40 },
-    { id: 'hw-3', name: 'M4x16 Flat Head Screws', type: 'Screw', size: 'M4', length: '16', head: 'Flat Counter-sunk', material: 'Stainless Steel A2', location: 'Organizer Bin B4', qty: 85, reorder: 25 },
-    { id: 'hw-4', name: 'M3 Hex Nuts', type: 'Nut', size: 'M3', length: 'N/A', head: 'Standard Hex', material: 'Zinc Plated Steel', location: 'Organizer Bin D1', qty: 250, reorder: 50 },
-    { id: 'hw-5', name: 'M3 Lock Nuts (Nyloc)', type: 'Nut', size: 'M3', length: 'N/A', head: 'Nyloc Hex', material: 'Stainless Steel A2', location: 'Organizer Bin D2', qty: 8, reorder: 25 },
-    { id: 'hw-6', name: 'M3 Short Heat-Set Inserts', type: 'Insert', size: 'M3', length: '4.2', head: 'Knurled Insert', material: 'Brass', location: 'Insert Jar', qty: 95, reorder: 20 },
-    { id: 'hw-7', name: 'M5 Threaded Brass Inserts', type: 'Insert', size: 'M5', length: '9.5', head: 'Knurled Insert', material: 'Brass', location: 'Insert Jar', qty: 40, reorder: 15 },
-    { id: 'hw-8', name: '608ZZ Ball Bearings', type: 'Bearing', size: 'N/A', length: '8x22x7', head: 'Double Shielded', material: 'Chrome Steel', location: 'Bearing Tray', qty: 24, reorder: 8 },
-    { id: 'hw-9', name: 'M4 Washers', type: 'Washer', size: 'M4', length: '0.8', head: 'Flat Washer', material: 'Stainless Steel A2', location: 'Organizer Bin E2', qty: 180, reorder: 30 }
+    { id: 'hw-1', boxNo: 'A1', category: 'Magnet', specification: 'Neodymium N35', sizeLD: '6', sizeW: '', sizeT: '3', qty: '120', remarks: 'Strong cylindrical magnets' },
+    { id: 'hw-2', boxNo: 'A2', category: 'Threaded Insert', specification: 'M3 Standard', sizeLD: '4.2', sizeW: '5.8', sizeT: '4', qty: '100+', remarks: 'Brass knurled heat-set' },
+    { id: 'hw-3', boxNo: 'A3', category: 'Threaded Insert', specification: 'M3 Short', sizeLD: '4.2', sizeW: '5.8', sizeT: '3', qty: '8', remarks: 'Low stock - reorder soon' },
+    { id: 'hw-4', boxNo: 'B1', category: 'Limit Switch', specification: 'Endstop Switch', sizeLD: '20', sizeW: '10', sizeT: '6.5', qty: '15', remarks: 'For X/Y/Z axes' },
+    { id: 'hw-5', boxNo: 'B2', category: 'NFC Card', specification: '13.56MHz RFID', sizeLD: '85.6', sizeW: '54', sizeT: '0.8', qty: '20+', remarks: 'For printer access control' },
+    { id: 'hw-6', boxNo: 'C3', category: 'Screw', specification: 'M3x10 Button Head', sizeLD: '10', sizeW: '', sizeT: '3', qty: '150', remarks: 'Hex drive black alloy steel' },
+    { id: 'hw-7', boxNo: 'C4', category: 'Screw', specification: 'M3x16 Socket Cap', sizeLD: '16', sizeW: '', sizeT: '3', qty: '45', remarks: 'Stainless steel A2' },
+    { id: 'hw-8', boxNo: 'D12', category: 'Nut', specification: 'M3 Hex Nut', sizeLD: '5.5', sizeW: '', sizeT: '2.4', qty: '200', remarks: 'Zinc plated steel' },
+    { id: 'hw-9', boxNo: 'E4', category: 'Bearing', specification: '608ZZ Ball Bearing', sizeLD: '22', sizeW: '', sizeT: '7', qty: '0', remarks: 'Out of stock - critical!' }
 ];
 
 // ==========================================================================
@@ -172,7 +177,7 @@ function switchTab(tabId) {
     }
 }
 
-// Storage Helpers
+// // Storage Helpers
 function loadDatabase() {
     const savedSpools = localStorage.getItem('nexis_spools');
     const savedHardware = localStorage.getItem('nexis_hardware');
@@ -204,8 +209,9 @@ function loadDatabase() {
         cloudAutoSyncToggle.checked = savedAutoSync;
     }
 
-    // Automatically migrate old weight-based schema to new quantity-based schema
     let migrated = false;
+    
+    // Automatically migrate old weight-based schema to new quantity-based schema for Spools
     if (spools.length > 0) {
         spools = spools.map(sp => {
             if (sp.qty === undefined) {
@@ -230,6 +236,42 @@ function loadDatabase() {
         });
     }
 
+    // Automatically migrate old hardware schema to the new 8-column layout
+    if (hardware.length > 0) {
+        let hwMigrated = false;
+        hardware = hardware.map(hw => {
+            if (hw.boxNo === undefined) {
+                hwMigrated = true;
+                // Old keys: id, name, type, size, length, head, material, location, qty, reorder
+                // New keys: id, boxNo, category, specification, sizeLD, sizeW, sizeT, qty, remarks
+                const boxNo = hw.location || 'A1';
+                const category = hw.type || 'Screw';
+                const specification = hw.size ? `${hw.size} ${hw.name || ''}`.trim() : (hw.name || 'M3');
+                const sizeLD = hw.length || '';
+                const sizeW = '';
+                const sizeT = '';
+                const qty = hw.qty !== undefined ? String(hw.qty) : '0';
+                const remarks = [hw.head, hw.material].filter(Boolean).join(', ') || '';
+                
+                return {
+                    id: hw.id,
+                    boxNo,
+                    category,
+                    specification,
+                    sizeLD,
+                    sizeW,
+                    sizeT,
+                    qty,
+                    remarks
+                };
+            }
+            return hw;
+        });
+        if (hwMigrated) {
+            migrated = true;
+        }
+    }
+
     // If database is completely empty (first run), seed with mock data
     if (spools.length === 0 && hardware.length === 0) {
         spools = [...MOCK_SPOOLS];
@@ -250,15 +292,18 @@ function saveDatabase() {
     localStorage.setItem('nexis_hardware', JSON.stringify(hardware));
     
     // Update Sync metadata labels
-    document.getElementById('spools-export-meta').innerText = `${spools.length} spools in database`;
-    document.getElementById('hardware-export-meta').innerText = `${hardware.length} hardware items in database`;
+    if (document.getElementById('spools-export-meta')) {
+        document.getElementById('spools-export-meta').innerText = `${spools.length} spools in database`;
+    }
+    if (document.getElementById('hardware-export-meta')) {
+        document.getElementById('hardware-export-meta').innerText = `${hardware.length} hardware items in database`;
+    }
 }
 
 function logActivity(text, type = 'info') {
     const activityFeed = document.getElementById('activity-feed');
     if (!activityFeed) return;
 
-    // Prepend new activity
     const item = document.createElement('div');
     item.className = `activity-item ${type}`;
     
@@ -279,6 +324,39 @@ function logActivity(text, type = 'info') {
     activityFeed.insertBefore(item, activityFeed.firstChild);
 }
 
+// Global Quantity Parser Helper
+function getStockLevelInfo(qtyText) {
+    const text = String(qtyText || '0').trim();
+    const hasPlus = text.includes('+');
+    const parsedQty = parseInt(text, 10);
+    const isNumeric = !isNaN(parsedQty);
+    
+    let statusLabel = 'In Stock';
+    let statusClass = 'good';
+    
+    if (!isNumeric || parsedQty <= 0) {
+        statusLabel = 'Out of Stock';
+        statusClass = 'out';
+    } else if (hasPlus) {
+        statusLabel = 'In Stock';
+        statusClass = 'good';
+    } else if (parsedQty <= 10) {
+        statusLabel = 'Low Stock';
+        statusClass = 'low';
+    } else {
+        statusLabel = 'In Stock';
+        statusClass = 'good';
+    }
+    
+    return {
+        parsedQty: isNumeric ? parsedQty : 0,
+        isNumeric,
+        hasPlus,
+        statusLabel,
+        statusClass
+    };
+}
+
 // ==========================================================================
 // DOM RENDERING ENGINE
 // ==========================================================================
@@ -286,6 +364,8 @@ function logActivity(text, type = 'info') {
 function renderAll() {
     renderDashboardStats();
     renderSpools();
+    renderCabinetTabs();
+    renderCabinetGrid();
     renderHardware();
     saveDatabase();
 
@@ -316,12 +396,18 @@ function renderDashboardStats() {
     }
 
     // 3. Hardware Pieces Total count
-    const totalHwQty = hardware.reduce((acc, hw) => acc + (parseInt(hw.qty) || 0), 0);
+    const totalHwQty = hardware.reduce((acc, hw) => {
+        const stockInfo = getStockLevelInfo(hw.qty);
+        return acc + stockInfo.parsedQty;
+    }, 0);
     dashTotalHardware.innerText = totalHwQty.toLocaleString();
     dashHardwareTypes.innerText = `${hardware.length} unique fastener types`;
 
-    // 4. Low Hardware Alert (qty <= reorder threshold)
-    const lowHwCount = hardware.filter(hw => hw.qty <= hw.reorder).length;
+    // 4. Low Hardware Alert (qty <= 10 or Out of Stock)
+    const lowHwCount = hardware.filter(hw => {
+        const stockInfo = getStockLevelInfo(hw.qty);
+        return stockInfo.statusClass === 'low' || stockInfo.statusClass === 'out';
+    }).length;
     dashLowHardware.innerText = lowHwCount;
     const hwAlertCard = dashLowHardware.closest('.stat-card');
     if (lowHwCount > 0) {
@@ -474,7 +560,6 @@ function renderSpools() {
             </div>
 
             <div class="spool-visual-section">
-                <!-- Large vector avatar spinning slow on hover -->
                 <div class="spool-avatar-wrapper" style="background: radial-gradient(circle, ${sp.hex}22, ${sp.hex}05); border: 1.5px solid ${sp.hex}30; box-shadow: 0 8px 20px ${sp.hex}18;">
                     <svg class="spool-avatar-icon" viewBox="0 0 24 24" fill="none" stroke="${sp.hex}" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -483,7 +568,7 @@ function renderSpools() {
                     </svg>
                 </div>
 
-                <div class="spool-details-list">
+                <div class="spools-details-list">
                     <div class="spool-detail-row">
                         <span>Color:</span>
                         <span class="spool-detail-value" style="color: ${sp.hex}; font-weight: 700;">${sp.color}</span>
@@ -501,7 +586,6 @@ function renderSpools() {
 
             <div class="spool-weight-numbers" style="margin-top: auto; margin-bottom: 16px; align-items: center; justify-content: space-between;">
                 <div class="weight-rem" style="font-size: 22px; line-height: 1;">${qty} ${qty === 1 ? 'spool' : 'spools'}</div>
-                <!-- Interactive spool quantity counters -->
                 <div class="spool-counter">
                     <button class="spool-counter-btn spool-dec" data-id="${sp.id}">-</button>
                     <span class="spool-counter-val">${qty}</span>
@@ -509,7 +593,6 @@ function renderSpools() {
                 </div>
             </div>
 
-            <!-- Notes Section if exists -->
             ${sp.notes ? `<div style="font-size:11.5px; color:var(--text-muted); font-style:italic; line-height:1.4; margin-bottom: 0px; display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${sp.notes}">${sp.notes}</div>` : ''}
         `;
         
@@ -546,6 +629,93 @@ function renderSpools() {
     });
 }
 
+// Render dynamic horizontal selection tabs for cabinets
+function renderCabinetTabs() {
+    const selector = document.getElementById('cabinet-section-selector');
+    if (!selector) return;
+    
+    selector.innerHTML = '';
+    CABINET_SECTIONS.forEach(sec => {
+        const btn = document.createElement('button');
+        btn.className = `cabinet-tab-btn ${activeCabinetSection === sec ? 'active' : ''}`;
+        btn.textContent = `Section ${sec}`;
+        btn.addEventListener('click', () => {
+            activeCabinetSection = sec;
+            activeCabinetFilter = null; // Clear click boundary on switcher tap
+            renderCabinetTabs();
+            renderCabinetGrid();
+            renderHardware();
+        });
+        selector.appendChild(btn);
+    });
+}
+
+// Render the responsive 5x4 bin grid layout
+function renderCabinetGrid() {
+    const container = document.getElementById('cabinet-grid-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    for (let i = 1; i <= 20; i++) {
+        const boxLabel = `${activeCabinetSection}${i}`;
+        const match = hardware.find(hw => hw.boxNo.trim().toUpperCase() === boxLabel);
+        
+        const drawerDiv = document.createElement('div');
+        
+        if (match) {
+            const stockInfo = getStockLevelInfo(match.qty);
+            drawerDiv.className = `cabinet-drawer drawer-${stockInfo.statusClass}`;
+            if (activeCabinetFilter === boxLabel) {
+                drawerDiv.classList.add('active-filter');
+            }
+            
+            // Occupied drawer details
+            drawerDiv.innerHTML = `
+                <div class="drawer-meta-top">
+                    <span class="drawer-label">${boxLabel}</span>
+                    <span class="drawer-qty-badge">${match.qty}</span>
+                </div>
+                <div class="drawer-meta-bottom">
+                    <span class="drawer-category">${match.category}</span>
+                    <span class="drawer-spec">${match.specification} ${match.sizeLD ? match.sizeLD + 'mm' : ''}</span>
+                </div>
+            `;
+            
+            // Drawer click filters table
+            drawerDiv.addEventListener('click', () => {
+                if (activeCabinetFilter === boxLabel) {
+                    activeCabinetFilter = null;
+                } else {
+                    activeCabinetFilter = boxLabel;
+                }
+                renderCabinetGrid();
+                renderHardware();
+            });
+        } else {
+            // Empty drawer container
+            drawerDiv.className = 'cabinet-drawer drawer-empty';
+            drawerDiv.innerHTML = `
+                <span class="drawer-label" style="position: absolute; top: 12px; left: 12px;">${boxLabel}</span>
+                <div class="drawer-add-icon" title="Add item to drawer ${boxLabel}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </div>
+            `;
+            
+            // Open form with box prefill
+            drawerDiv.addEventListener('click', () => {
+                document.getElementById('modal-hardware-title').innerText = `Add Hardware (Box ${boxLabel})`;
+                formHardware.reset();
+                document.getElementById('hardware-id').value = '';
+                document.getElementById('hw-boxNo').value = boxLabel;
+                modalHardware.showModal();
+            });
+        }
+        
+        container.appendChild(drawerDiv);
+    }
+}
+
 function renderHardware() {
     if (!hardwareTbody) return;
     
@@ -555,32 +725,33 @@ function renderHardware() {
 
     const filtered = hardware.filter(hw => {
         const matchesSearch = searchQuery === '' || 
-            hw.name.toLowerCase().includes(searchQuery) ||
-            hw.type.toLowerCase().includes(searchQuery) ||
-            hw.size.toLowerCase().includes(searchQuery) ||
-            hw.material.toLowerCase().includes(searchQuery) ||
-            hw.location.toLowerCase().includes(searchQuery);
+            hw.boxNo.toLowerCase().includes(searchQuery) ||
+            hw.category.toLowerCase().includes(searchQuery) ||
+            hw.specification.toLowerCase().includes(searchQuery) ||
+            hw.remarks.toLowerCase().includes(searchQuery);
 
-        const matchesType = typeFilter === 'all' || hw.type === typeFilter;
+        const matchesType = typeFilter === 'all' || hw.category === typeFilter;
         
         let matchesSize = true;
         if (sizeFilter !== 'all') {
             if (sizeFilter === 'other') {
-                matchesSize = hw.size === 'N/A' || !hw.size.startsWith('M');
+                matchesSize = !['M2', 'M2.5', 'M3', 'M4', 'M5', 'M6', 'M8'].some(s => hw.specification.toUpperCase().includes(s));
             } else {
-                matchesSize = hw.size === sizeFilter;
+                matchesSize = hw.specification.toUpperCase().includes(sizeFilter.toUpperCase());
             }
         }
 
-        return matchesSearch && matchesType && matchesSize;
+        const matchesCabinet = !activeCabinetFilter || hw.boxNo.trim().toUpperCase() === activeCabinetFilter.trim().toUpperCase();
+
+        return matchesSearch && matchesType && matchesSize && matchesCabinet;
     });
 
     if (filtered.length === 0) {
         hardwareTbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center" style="padding: 40px; color: var(--text-muted);">
+                <td colspan="9" class="text-center" style="padding: 40px; color: var(--text-muted);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px; height:36px; margin-bottom:8px;"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                    <p>No matching hardware items found in your bins.</p>
+                    <p>No matching hardware items found in your cabinet bins.</p>
                 </td>
             </tr>
         `;
@@ -591,54 +762,37 @@ function renderHardware() {
     
     filtered.forEach(hw => {
         const tr = document.createElement('tr');
-        
-        // Define stock levels
-        let statusLabel = 'In Stock';
-        let statusClass = 'good';
-        const qty = parseInt(hw.qty) || 0;
-        const limit = parseInt(hw.reorder) || 10;
-        
-        if (qty <= 0) {
-            statusLabel = 'Out of Stock';
-            statusClass = 'out';
-        } else if (qty <= limit) {
-            statusLabel = 'Low Stock';
-            statusClass = 'low';
-        }
+        const stockInfo = getStockLevelInfo(hw.qty);
 
-        const sizeStr = hw.size && hw.size !== 'N/A' ? `<span class="code-badge">${hw.size}</span>` : 'N/A';
-        const lenStr = hw.length && hw.length !== 'N/A' ? `${hw.length} mm` : 'N/A';
+        const sizeLDStr = hw.sizeLD && hw.sizeLD !== 'N/A' && hw.sizeLD !== '' ? `${hw.sizeLD} mm` : 'N/A';
+        const sizeWStr = hw.sizeW && hw.sizeW !== 'N/A' && hw.sizeW !== '' ? `${hw.sizeW} mm` : 'N/A';
+        const sizeTStr = hw.sizeT && hw.sizeT !== 'N/A' && hw.sizeT !== '' ? `${hw.sizeT} mm` : 'N/A';
 
         tr.innerHTML = `
-            <td style="font-weight: 600; color: var(--text-primary);">
-                <div style="display:flex; flex-direction:column; gap:2px;">
-                    <span>${hw.name}</span>
-                    <span style="font-size:11px; color:var(--text-muted); font-weight:400;">📍 Location: ${hw.location || 'Bin Default'}</span>
-                </div>
-            </td>
-            <td>${hw.type}</td>
-            <td>${sizeStr}</td>
-            <td>${lenStr}</td>
-            <td style="color: var(--text-secondary); font-size: 13px;">${hw.material || 'Steel'}</td>
+            <td style="font-weight: 600; color: var(--text-primary);">${hw.boxNo}</td>
+            <td>${hw.category}</td>
+            <td><span class="code-badge">${hw.specification}</span></td>
+            <td class="text-center">${sizeLDStr}</td>
+            <td class="text-center">${sizeWStr}</td>
+            <td class="text-center">${sizeTStr}</td>
             <td class="text-center">
-                <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-                    <span class="status-pill ${statusClass}">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <span class="status-pill ${stockInfo.statusClass}">
                         <span class="status-indicator"></span>
-                        <span>${statusLabel}</span>
+                        <span>${stockInfo.statusLabel}</span>
                     </span>
-                    <span style="font-size: 11.5px; font-weight:700;">${qty} units</span>
+                    <span style="font-size: 11.5px; font-weight:700;">${hw.qty}</span>
                 </div>
             </td>
+            <td style="color: var(--text-secondary); font-size: 13px;">${hw.remarks || 'N/A'}</td>
             <td class="text-right">
                 <div class="hw-actions-wrapper">
-                    <!-- Quantity counters -->
                     <div class="hw-counter">
                         <button class="hw-counter-btn hw-dec" data-id="${hw.id}">-</button>
-                        <span class="hw-counter-val">${qty}</span>
+                        <span class="hw-counter-val">${hw.qty}</span>
                         <button class="hw-counter-btn hw-inc" data-id="${hw.id}">+</button>
                     </div>
 
-                    <!-- Extra action icons -->
                     <button class="icon-only-btn edit-hardware" data-id="${hw.id}" title="Edit part">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
@@ -652,18 +806,18 @@ function renderHardware() {
         hardwareTbody.appendChild(tr);
     });
 
-    // Wire up events dynamically
+    // Wire up events dynamically (steps of 1)
     document.querySelectorAll('.hw-inc').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const id = e.target.getAttribute('data-id');
-            changeHardwareQty(id, 10);
+            changeHardwareQty(id, 1);
         });
     });
 
     document.querySelectorAll('.hw-dec').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const id = e.target.getAttribute('data-id');
-            changeHardwareQty(id, -10);
+            changeHardwareQty(id, -1);
         });
     });
 
@@ -707,12 +861,24 @@ function changeHardwareQty(id, diff) {
     if (hwIndex === -1) return;
 
     const hw = hardware[hwIndex];
-    hw.qty = Math.max(hw.qty + diff, 0);
+    const qtyStr = String(hw.qty || '0').trim();
+    const hasPlus = qtyStr.includes('+');
+    let currentQty = parseInt(qtyStr, 10);
+    if (isNaN(currentQty)) currentQty = 0;
+    
+    let newQtyVal = Math.max(currentQty + diff, 0);
+    let newQtyStr = String(newQtyVal);
+    if (hasPlus && newQtyVal > 0) {
+        newQtyStr = newQtyVal + '+';
+    }
+    
+    hw.qty = newQtyStr;
 
-    if (hw.qty <= hw.reorder && (hw.qty - diff) > hw.reorder) {
-        logActivity(`Low stock warning! "${hw.name}" down to ${hw.qty} units`, 'warning');
+    const stockInfo = getStockLevelInfo(hw.qty);
+    if (stockInfo.statusClass === 'low' && diff < 0) {
+        logActivity(`Low stock warning! "${hw.category} - ${hw.specification}" down to ${hw.qty} units`, 'warning');
     } else {
-        logActivity(`Updated inventory count of "${hw.name}" by ${diff > 0 ? '+' : ''}${diff}`, 'info');
+        logActivity(`Updated count of "${hw.category} - ${hw.specification}" by ${diff > 0 ? '+' : ''}${diff} (Current: ${hw.qty})`, 'info');
     }
 
     renderAll();
@@ -731,7 +897,7 @@ function deleteSpool(id) {
 
 function deleteHardware(id) {
     const hw = hardware.find(h => h.id === id);
-    const label = hw ? hw.name : 'Unknown Hardware';
+    const label = hw ? `${hw.category} (${hw.boxNo})` : 'Unknown Hardware';
 
     if (confirm(`Are you sure you want to delete "${label}"?`)) {
         hardware = hardware.filter(h => h.id !== id);
@@ -745,7 +911,6 @@ function deleteHardware(id) {
 // ==========================================================================
 
 function setupFiltersAndSearch() {
-    // Search listener (with debounce for premium feel)
     let searchTimeout;
     globalSearch.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
@@ -755,7 +920,6 @@ function setupFiltersAndSearch() {
         }, 150);
     });
 
-    // Reset filters
     filterSpoolMaterial.addEventListener('change', () => { renderSpools(); });
     filterSpoolStatus.addEventListener('change', () => { renderSpools(); });
     filterHardwareType.addEventListener('change', () => { renderHardware(); });
@@ -767,7 +931,6 @@ function setupFiltersAndSearch() {
 // ==========================================================================
 
 function setupModals() {
-    // Show modals
     btnAddSpool.addEventListener('click', () => {
         document.getElementById('modal-spool-title').innerText = 'Add New Filament Spool';
         formSpool.reset();
@@ -784,7 +947,6 @@ function setupModals() {
         modalHardware.showModal();
     });
 
-    // Close on cancel / click out
     [btnCloseSpoolModal, btnCancelSpool].forEach(btn => {
         btn.addEventListener('click', () => modalSpool.close());
     });
@@ -793,7 +955,6 @@ function setupModals() {
         btn.addEventListener('click', () => modalHardware.close());
     });
 
-    // Double check click outside modal closes it
     [modalSpool, modalHardware].forEach(modal => {
         modal.addEventListener('click', (e) => {
             const dialogDimensions = modal.getBoundingClientRect();
@@ -808,7 +969,6 @@ function setupModals() {
         });
     });
 
-    // Submit Forms
     formSpool.addEventListener('submit', (e) => {
         e.preventDefault();
         saveSpoolForm();
@@ -819,7 +979,6 @@ function setupModals() {
         saveHardwareForm();
     });
 
-    // Theme Toggle
     themeToggleBtn.addEventListener('click', () => {
         theme = theme === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', theme);
@@ -828,12 +987,11 @@ function setupModals() {
         logActivity(`Switched interface to ${theme} visual theme`, 'info');
     });
 
-    // Header Quick Add
     btnQuickAdd.addEventListener('click', () => {
         if (activeTab === 'hardware') {
             btnAddHardware.click();
         } else {
-            btnAddSpool.click(); // Default or spools tab active
+            btnAddSpool.click();
         }
     });
 }
@@ -890,14 +1048,12 @@ function saveSpoolForm() {
     };
 
     if (id) {
-        // Edit Spool
         const idx = spools.findIndex(s => s.id === id);
         if (idx !== -1) {
             spools[idx] = { id, ...spoolData };
             logActivity(`Updated details of spool "${spoolData.brand} ${spoolData.color}"`, 'info');
         }
     } else {
-        // Create new Spool
         const newSpool = {
             id: 'sp-' + Date.now(),
             ...spoolData
@@ -916,15 +1072,14 @@ function openEditHardwareModal(id) {
 
     document.getElementById('modal-hardware-title').innerText = 'Edit Hardware Item';
     document.getElementById('hardware-id').value = hw.id;
-    document.getElementById('hw-name').value = hw.name;
-    document.getElementById('hw-type').value = hw.type;
-    document.getElementById('hw-size').value = hw.size || 'M3';
-    document.getElementById('hw-length').value = hw.length || '';
-    document.getElementById('hw-head').value = hw.head || '';
-    document.getElementById('hw-material').value = hw.material || '';
-    document.getElementById('hw-location').value = hw.location || '';
-    document.getElementById('hw-qty').value = hw.qty;
-    document.getElementById('hw-reorder').value = hw.reorder;
+    document.getElementById('hw-boxNo').value = hw.boxNo || '';
+    document.getElementById('hw-category').value = hw.category || '';
+    document.getElementById('hw-specification').value = hw.specification || '';
+    document.getElementById('hw-sizeLD').value = hw.sizeLD || '';
+    document.getElementById('hw-sizeW').value = hw.sizeW || '';
+    document.getElementById('hw-sizeT').value = hw.sizeT || '';
+    document.getElementById('hw-qty').value = hw.qty || '0';
+    document.getElementById('hw-remarks').value = hw.remarks || '';
 
     modalHardware.showModal();
 }
@@ -932,32 +1087,29 @@ function openEditHardwareModal(id) {
 function saveHardwareForm() {
     const id = document.getElementById('hardware-id').value;
     const hwData = {
-        name: document.getElementById('hw-name').value.trim(),
-        type: document.getElementById('hw-type').value,
-        size: document.getElementById('hw-size').value,
-        length: document.getElementById('hw-length').value.trim() || 'N/A',
-        head: document.getElementById('hw-head').value.trim() || 'N/A',
-        material: document.getElementById('hw-material').value.trim() || 'Steel',
-        location: document.getElementById('hw-location').value.trim(),
-        qty: parseInt(document.getElementById('hw-qty').value) || 0,
-        reorder: parseInt(document.getElementById('hw-reorder').value) || 20
+        boxNo: document.getElementById('hw-boxNo').value.trim().toUpperCase(),
+        category: document.getElementById('hw-category').value.trim(),
+        specification: document.getElementById('hw-specification').value.trim(),
+        sizeLD: document.getElementById('hw-sizeLD').value.trim() || '',
+        sizeW: document.getElementById('hw-sizeW').value.trim() || '',
+        sizeT: document.getElementById('hw-sizeT').value.trim() || '',
+        qty: document.getElementById('hw-qty').value.trim() || '0',
+        remarks: document.getElementById('hw-remarks').value.trim() || ''
     };
 
     if (id) {
-        // Edit hardware
         const idx = hardware.findIndex(h => h.id === id);
         if (idx !== -1) {
             hardware[idx] = { id, ...hwData };
-            logActivity(`Updated details of hardware "${hwData.name}"`, 'info');
+            logActivity(`Updated details of hardware "${hwData.category} (${hwData.boxNo})"`, 'info');
         }
     } else {
-        // Create new hardware
         const newHw = {
             id: 'hw-' + Date.now(),
             ...hwData
         };
         hardware.push(newHw);
-        logActivity(`Created new hardware part "${hwData.name}"`, 'success');
+        logActivity(`Created new hardware part "${hwData.category} (${hwData.boxNo})"`, 'success');
     }
 
     renderAll();
@@ -969,7 +1121,6 @@ function saveHardwareForm() {
 // ==========================================================================
 
 function setupSyncEngine() {
-    // Import action trigger
     btnRunImport.addEventListener('click', () => {
         const text = csvImportText.value.trim();
         if (!text) {
@@ -979,7 +1130,6 @@ function setupSyncEngine() {
         runCSVImport(text);
     });
 
-    // Dropzone logic
     csvFileDropzone.addEventListener('click', () => {
         csvFileInput.click();
     });
@@ -1009,7 +1159,6 @@ function setupSyncEngine() {
         if (file) handleCSVFile(file);
     });
 
-    // Standard download triggers
     btnExportSpools.addEventListener('click', () => {
         exportCSVFile(spools, 'nexis_spools_export.csv');
     });
@@ -1018,7 +1167,6 @@ function setupSyncEngine() {
         exportCSVFile(hardware, 'nexis_hardware_export.csv');
     });
 
-    // Demo loader
     btnLoadMockData.addEventListener('click', () => {
         if (confirm('This will replace your current local database with the premium spools & hardware demo pack. Proceed?')) {
             spools = [...MOCK_SPOOLS];
@@ -1030,7 +1178,6 @@ function setupSyncEngine() {
         }
     });
 
-    // Real-time Cloud Sync bindings
     if (cloudApiUrlInput) {
         cloudApiUrlInput.addEventListener('change', () => {
             const url = cloudApiUrlInput.value.trim();
@@ -1063,7 +1210,6 @@ function setupSyncEngine() {
         });
     }
 
-    // Initial cloud connection label update
     updateCloudStatusLabel('idle');
 }
 
@@ -1083,20 +1229,27 @@ function handleCSVFile(file) {
     reader.readAsText(file);
 }
 
-// Core parsing logic
 function runCSVImport(csvText) {
-    // Detect delimiter
     const firstLine = csvText.split('\n')[0];
     const delimiter = firstLine.includes(';') ? ';' : ',';
 
-    // Basic CSV Line splitter (handles double quoted values containing commas)
     const splitCSVLine = (text) => {
-        const matches = text.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-        // Fallback for simple splitting if regex fails or is weird
-        if (matches.length === 0) {
-            return text.split(delimiter).map(cell => cell.replace(/^["']|["']$/g, '').trim());
+        let result = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === delimiter && !inQuotes) {
+                result.push(cur.trim());
+                cur = '';
+            } else {
+                cur += char;
+            }
         }
-        return matches.map(cell => cell.replace(/^["']|["']$/g, '').trim());
+        result.push(cur.trim());
+        return result.map(cell => cell.replace(/^["']|["']$/g, '').trim());
     };
 
     const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -1105,112 +1258,114 @@ function runCSVImport(csvText) {
         return;
     }
 
-    // Capture Headers
-    // Split header elements cleanly
-    const rawHeaders = lines[0].split(delimiter).map(h => h.replace(/^["']|["']$/g, '').trim().toLowerCase());
+    const rawHeaders = splitCSVLine(lines[0]).map(h => h.toLowerCase());
     
-    // Check if it looks like a spool spreadsheet or a hardware spreadsheet
-    const isSpoolSheet = rawHeaders.includes('material') || rawHeaders.includes('brand') || rawHeaders.includes('hexcode');
-    const isHardwareSheet = rawHeaders.includes('threadsize') || rawHeaders.includes('reorder') || rawHeaders.includes('head');
-
-    if (!isSpoolSheet && !isHardwareSheet) {
-        // Fallback guess: if we find thread size or qty, it's hardware
-        alert('Unrecognized columns. Please ensure you have headers like Brand, Material, Color OR ThreadSize, Quantity in your CSV.');
-        return;
-    }
-
+    // Guess based on keys
+    const isSpoolSheet = rawHeaders.includes('brand') || rawHeaders.includes('material') || rawHeaders.includes('hexcode') || rawHeaders.includes('reorderlimit');
     let importedCount = 0;
-    const parsedData = [];
-
-    for (let i = 1; i < lines.length; i++) {
-        // Parse data rows
-        const cells = lines[i].split(delimiter).map(c => c.replace(/^["']|["']$/g, '').trim());
-        if (cells.length < rawHeaders.length) continue; // Skip incomplete lines
-
-        const item = {};
-        rawHeaders.forEach((header, index) => {
-            item[header] = cells[index];
-        });
-        parsedData.push(item);
-    }
 
     if (isSpoolSheet) {
-        // Map to standard Spools state schema
-        const mappedSpools = parsedData.map((row, index) => {
+        const parsedSpools = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cells = splitCSVLine(lines[i]);
+            if (cells.length < rawHeaders.length) continue;
+
+            const row = {};
+            rawHeaders.forEach((header, index) => {
+                row[header] = cells[index];
+            });
+
             const brand = row['brand'] || row['manufacturer'] || 'Unknown Brand';
             const material = row['material'] || 'PLA';
             const color = row['color'] || 'Generic Color';
             const hex = row['hexcode'] || row['hex'] || '#6366f1';
             const qty = parseInt(row['quantity'] || row['qty'] || row['count'] || row['spools']) || 1;
             const reorder = parseInt(row['reorderlimit'] || row['reorder'] || row['alert']) || 1;
-            const location = row['shelf'] || row['location'] || 'Storage Box';
+            const location = row['location'] || row['shelf'] || 'Storage Box';
             const notes = row['notes'] || row['comment'] || '';
 
-            return {
-                id: `sp-import-${Date.now()}-${index}`,
+            parsedSpools.push({
+                id: `sp-import-${Date.now()}-${i}`,
                 brand, material, color, hex, qty, reorder, location, notes
-            };
-        });
+            });
+        }
 
-        spools = mappedSpools;
-        importedCount = mappedSpools.length;
-        logActivity(`Successfully imported ${importedCount} filament spools from Google Sheets CSV`, 'success');
-        alert(`Successfully imported ${importedCount} filament spools! Check the Filament Spools tab.`);
+        spools = parsedSpools;
+        importedCount = parsedSpools.length;
+        logActivity(`Successfully imported ${importedCount} filament spools from CSV`, 'success');
+        alert(`Successfully imported ${importedCount} filament spools!`);
         switchTab('spools');
     } else {
-        // Map to standard Hardware state schema
-        const mappedHw = parsedData.map((row, index) => {
-            const name = row['partname'] || row['name'] || row['title'] || 'M3 Socket Screw';
-            const type = row['type'] || row['category'] || 'Screw';
-            const size = row['threadsize'] || row['size'] || 'M3';
-            const length = row['length'] || row['dimensions'] || 'N/A';
-            const head = row['headtype'] || row['head'] || 'N/A';
-            const material = row['material'] || 'Stainless Steel';
-            const location = row['location'] || row['bin'] || 'Organizer Tray';
-            const qty = parseInt(row['quantity'] || row['qty'] || row['count']) || 100;
-            const reorder = parseInt(row['reorderlimit'] || row['reorder']) || 20;
+        const parsedHardware = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cells = splitCSVLine(lines[i]);
+            if (cells.length < rawHeaders.length) continue;
 
-            return {
-                id: `hw-import-${Date.now()}-${index}`,
-                name, type, size, length, head, material, location, qty, reorder
+            const row = {};
+            rawHeaders.forEach((header, index) => {
+                row[header] = cells[index];
+            });
+
+            const getVal = (aliases) => {
+                for (const alias of aliases) {
+                    if (row[alias] !== undefined) return row[alias];
+                }
+                return '';
             };
-        });
 
-        hardware = mappedHw;
-        importedCount = mappedHw.length;
+            const boxNo = getVal(['box no.', 'boxno', 'drawer', 'location', 'box']).toUpperCase();
+            const category = getVal(['category', 'type', 'partname', 'name']) || 'Screw';
+            const specification = getVal(['specification', 'spec', 'threadsize', 'size']) || 'M3';
+            const sizeLD = getVal(['l/d', 'size (l/d)', 'length', 'l', 'd']);
+            const sizeW = getVal(['w', 'size (w)', 'width']);
+            const sizeT = getVal(['t', 'size (t)', 'thickness', 'thickness / height', 'height']);
+            const qty = String(getVal(['qty', 'quantity', 'count']) || '0').trim();
+            const remarks = getVal(['remarks', 'notes', 'comment', 'headtype', 'head', 'material']);
+
+            parsedHardware.push({
+                id: `hw-import-${Date.now()}-${i}`,
+                boxNo,
+                category,
+                specification,
+                sizeLD,
+                sizeW,
+                sizeT,
+                qty,
+                remarks
+            });
+        }
+
+        hardware = parsedHardware;
+        importedCount = parsedHardware.length;
         logActivity(`Successfully imported ${importedCount} hardware fasteners from CSV`, 'success');
-        alert(`Successfully imported ${importedCount} hardware fasteners! Check the Hardware Stock tab.`);
+        alert(`Successfully imported ${importedCount} hardware fasteners!`);
         switchTab('hardware');
     }
 
     renderAll();
 }
 
-// Convert state objects array back into clean CSV string
 function exportCSVFile(dataArray, filename) {
     if (dataArray.length === 0) {
         alert('Your inventory has 0 items to export.');
         return;
     }
 
-    // Extract headers based on keys of first object, filtering out system ID
-    const sample = dataArray[0];
-    const keys = Object.keys(sample).filter(k => k !== 'id');
+    const isSpool = dataArray === spools;
+    let headersLine = '';
+    let keys = [];
     
-    // Header string
-    // Format headers user friendly for Google Sheets
-    const headersLine = keys.map(k => {
-        if (k === 'hex') return 'HexCode';
-        if (k === 'qty') return 'Quantity';
-        if (k === 'reorder') return 'ReorderLimit';
-        return k.charAt(0).toUpperCase() + k.slice(1);
-    }).join(',');
+    if (isSpool) {
+        headersLine = 'Brand,Material,Color,HexCode,Quantity,ReorderLimit,Location,Notes';
+        keys = ['brand', 'material', 'color', 'hex', 'qty', 'reorder', 'location', 'notes'];
+    } else {
+        headersLine = 'Box No.,Category,Specification,L/D,W,T,Qty,Remarks';
+        keys = ['boxNo', 'category', 'specification', 'sizeLD', 'sizeW', 'sizeT', 'qty', 'remarks'];
+    }
 
-    // Rows compilation
     const rows = dataArray.map(item => {
         return keys.map(k => {
             let val = item[k] === undefined || item[k] === null ? '' : item[k];
-            // Escape double quotes inside text cells if necessary
             if (typeof val === 'string' && (val.includes(',') || val.includes('"') || val.includes('\n'))) {
                 val = `"${val.replace(/"/g, '""')}"`;
             }
@@ -1220,7 +1375,6 @@ function exportCSVFile(dataArray, filename) {
 
     const csvContent = [headersLine, ...rows].join('\n');
     
-    // Browser download trigger
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -1320,7 +1474,6 @@ async function fetchFromCloud() {
             if (data) {
                 suppressAutoSync = true;
                 
-                // Map retrieved data arrays back to application database schema if valid
                 if (data.spools && Array.isArray(data.spools)) {
                     spools = data.spools.map((sp, idx) => ({
                         id: sp.id || `sp-cloud-${Date.now()}-${idx}`,
@@ -1328,7 +1481,7 @@ async function fetchFromCloud() {
                         material: sp.material || 'PLA',
                         color: sp.color || 'Default',
                         hex: sp.hex || '#6366f1',
-                        qty: Number(sp.qty) || 0,
+                        qty: sp.qty !== undefined ? sp.qty : 0,
                         reorder: Number(sp.reorder) || 0,
                         location: sp.location || '',
                         notes: sp.notes || ''
@@ -1337,15 +1490,14 @@ async function fetchFromCloud() {
                 if (data.hardware && Array.isArray(data.hardware)) {
                     hardware = data.hardware.map((hw, idx) => ({
                         id: hw.id || `hw-cloud-${Date.now()}-${idx}`,
-                        name: hw.name || 'Unknown Item',
-                        type: hw.type || 'Screw',
-                        size: hw.size || 'M3',
-                        length: hw.length || 'N/A',
-                        head: hw.head || 'N/A',
-                        material: hw.material || 'Stainless Steel',
-                        location: hw.location || '',
-                        qty: Number(hw.qty) || 0,
-                        reorder: Number(hw.reorder) || 20
+                        boxNo: hw.boxNo || `A${idx+1}`,
+                        category: hw.category || 'Screw',
+                        specification: hw.specification || 'M3',
+                        sizeLD: hw.sizeLD !== undefined ? String(hw.sizeLD) : '',
+                        sizeW: hw.sizeW !== undefined ? String(hw.sizeW) : '',
+                        sizeT: hw.sizeT !== undefined ? String(hw.sizeT) : '',
+                        qty: hw.qty !== undefined ? String(hw.qty).trim() : '0',
+                        remarks: hw.remarks || ''
                     }));
                 }
                 
@@ -1378,7 +1530,6 @@ async function pushToCloud(isAutoSync = false) {
         return;
     }
 
-    // Safety Check: Prevent overwriting the cloud database if we haven't successfully fetched first!
     if (!hasFetchedFromCloud) {
         if (isAutoSync) {
             console.warn('Auto-sync skipped: Fetch has not been performed in this session. Pull data first to avoid overwriting.');
@@ -1416,15 +1567,14 @@ async function pushToCloud(isAutoSync = false) {
                 notes: sp.notes
             })),
             hardware: hardware.map(hw => ({
-                name: hw.name,
-                type: hw.type,
-                size: hw.size,
-                length: hw.length,
-                head: hw.head,
-                material: hw.material,
-                location: hw.location,
+                boxNo: hw.boxNo,
+                category: hw.category,
+                specification: hw.specification,
+                sizeLD: hw.sizeLD,
+                sizeW: hw.sizeW,
+                sizeT: hw.sizeT,
                 qty: hw.qty,
-                reorder: hw.reorder
+                remarks: hw.remarks
             }))
         };
 
@@ -1484,15 +1634,35 @@ function populateMaterialAndSizeFilters() {
     });
     filterSpoolMaterial.value = currentMaterialVal;
 
-    // 2. Hardware Sizes
+    // 2. Hardware Categories
+    const currentTypeVal = filterHardwareType.value;
+    const categories = new Set(['Screw', 'Nut', 'Bearing', 'Washer', 'Magnet', 'Threaded Insert', 'Limit Switch', 'NFC Card']);
+    hardware.forEach(hw => {
+        if (hw.category) categories.add(hw.category);
+    });
+    
+    filterHardwareType.innerHTML = '<option value="all">All Categories</option>';
+    Array.from(categories).sort().forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        filterHardwareType.appendChild(opt);
+    });
+    filterHardwareType.value = currentTypeVal;
+
+    // 3. Hardware Sizes / Specs
     const currentSizeVal = filterHardwareSize.value;
     const sizes = new Set(['M2', 'M2.5', 'M3', 'M4', 'M5', 'M6', 'M8']);
     hardware.forEach(hw => {
-        if (hw.size && hw.size !== 'N/A' && hw.size.startsWith('M')) sizes.add(hw.size);
+        const spec = String(hw.specification || '');
+        const match = spec.match(/M\d+(?:\.\d+)?/i);
+        if (match) {
+            sizes.add(match[0].toUpperCase());
+        }
     });
 
     filterHardwareSize.innerHTML = `
-        <option value="all">All Sizes</option>
+        <option value="all">All Specs</option>
         ` + Array.from(sizes).sort((a,b) => {
             const numA = parseFloat(a.replace(/[^\d.]/g, '')) || 0;
             const numB = parseFloat(b.replace(/[^\d.]/g, '')) || 0;
@@ -1502,3 +1672,4 @@ function populateMaterialAndSizeFilters() {
     `;
     filterHardwareSize.value = currentSizeVal;
 }
+

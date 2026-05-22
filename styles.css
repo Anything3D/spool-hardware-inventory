@@ -1604,6 +1604,267 @@ body {
 }
 
 /* ==========================================================================
+   CABINET STORAGE ORGANIZER MAP
+   ========================================================================== */
+.cabinet-section-card {
+    border: 1px solid var(--glass-border);
+    transition: var(--transition-smooth);
+}
+
+.cabinet-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.cabinet-title {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cabinet-title svg {
+    width: 20px;
+    height: 20px;
+    color: var(--purple);
+}
+
+.cabinet-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.cabinet-tab-row {
+    display: inline-flex;
+    background-color: var(--bg-surface-elevated);
+    border: 1px solid var(--border-color);
+    padding: 4px;
+    border-radius: var(--border-radius-md);
+    gap: 4px;
+}
+
+.cabinet-tab-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.cabinet-tab-btn:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.cabinet-tab-btn.active {
+    background: linear-gradient(135deg, var(--purple), rgba(168, 85, 247, 0.8));
+    color: white;
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+}
+
+.cabinet-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    background: rgba(7, 10, 18, 0.4);
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    border-radius: var(--border-radius-lg);
+    box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.cabinet-drawer {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-md);
+    padding: 12px;
+    aspect-ratio: 1.4 / 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.cabinet-drawer:hover {
+    transform: translateY(-4px) scale(1.02);
+    background: var(--bg-surface-elevated);
+}
+
+/* Metallic central handle visual */
+.cabinet-drawer::after {
+    content: '';
+    width: 36px;
+    height: 6px;
+    background: linear-gradient(to bottom, #cbd5e1, #64748b);
+    border-radius: 3px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: var(--transition-smooth);
+    opacity: 0.85;
+}
+
+.cabinet-drawer:hover::after {
+    background: linear-gradient(to bottom, #ffffff, #94a3b8);
+    opacity: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Drawer Inner Layout elements */
+.drawer-meta-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.drawer-label {
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-muted);
+}
+
+.drawer-qty-badge {
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.drawer-meta-bottom {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: auto;
+}
+
+.drawer-category {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.drawer-spec {
+    font-size: 10px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+/* Visual States */
+.drawer-good {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.04), rgba(19, 27, 46, 0.6));
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.08);
+}
+.drawer-good .drawer-qty-badge {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: var(--success);
+}
+
+.drawer-low {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.04), rgba(19, 27, 46, 0.6));
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.08);
+}
+.drawer-low .drawer-qty-badge {
+    background-color: rgba(245, 158, 11, 0.12);
+    color: var(--warning);
+}
+
+.drawer-out {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.04), rgba(19, 27, 46, 0.6));
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.08);
+    animation: drawer-danger-glow 2s infinite ease-in-out;
+}
+.drawer-out .drawer-qty-badge {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: var(--danger);
+}
+
+.drawer-empty {
+    border: 2px dashed rgba(255, 255, 255, 0.08);
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.drawer-empty::after {
+    display: none; /* No handle on empty drawer */
+}
+.drawer-empty:hover {
+    border-color: var(--purple);
+    background: rgba(168, 85, 247, 0.02);
+}
+
+.drawer-add-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-smooth);
+}
+.drawer-empty:hover .drawer-add-icon {
+    background-color: var(--purple);
+    color: white;
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+    transform: scale(1.1);
+}
+.drawer-add-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Active Cabinet Drawer Filter Selection State */
+.cabinet-drawer.active-filter {
+    border-color: var(--purple);
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.4), inset 0 0 8px rgba(168, 85, 247, 0.2);
+    animation: drawer-active-glow 1.5s infinite ease-in-out;
+}
+
+@keyframes drawer-danger-glow {
+    0%, 100% { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 8px rgba(239, 68, 68, 0.08); }
+    50% { border-color: rgba(239, 68, 68, 0.7); box-shadow: 0 0 16px rgba(239, 68, 68, 0.25); }
+}
+
+@keyframes drawer-active-glow {
+    0%, 100% { border-color: var(--purple); box-shadow: 0 0 12px rgba(168, 85, 247, 0.3); }
+    50% { border-color: var(--secondary); box-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
+}
+
+/* ==========================================================================
    FLAWLESS MOBILE RESPONSIVENESS (SCREENS UNDER 768PX)
    ========================================================================== */
 @media (max-width: 768px) {
@@ -1827,15 +2088,17 @@ body {
         letter-spacing: 0.5px !important;
     }
     
-    .premium-table td:nth-of-type(1)::before { content: "Part Name" !important; }
-    .premium-table td:nth-of-type(2)::before { content: "Type" !important; }
-    .premium-table td:nth-of-type(3)::before { content: "Thread Size" !important; }
-    .premium-table td:nth-of-type(4)::before { content: "Length" !important; }
-    .premium-table td:nth-of-type(5)::before { content: "Material" !important; }
-    .premium-table td:nth-of-type(6)::before { content: "Stock Level" !important; }
-    .premium-table td:nth-of-type(7)::before { content: "Actions" !important; }
+    .premium-table td:nth-of-type(1)::before { content: "Box No." !important; }
+    .premium-table td:nth-of-type(2)::before { content: "Category" !important; }
+    .premium-table td:nth-of-type(3)::before { content: "Specification" !important; }
+    .premium-table td:nth-of-type(4)::before { content: "Size (L/D)" !important; }
+    .premium-table td:nth-of-type(5)::before { content: "Size (W)" !important; }
+    .premium-table td:nth-of-type(6)::before { content: "Size (T)" !important; }
+    .premium-table td:nth-of-type(7)::before { content: "Quantity" !important; }
+    .premium-table td:nth-of-type(8)::before { content: "Remarks" !important; }
+    .premium-table td:nth-of-type(9)::before { content: "Actions" !important; }
     
-    /* Make the Part Name behave like a prominent card header */
+    /* Make Box No behave like a prominent card header */
     .premium-table td:nth-of-type(1) {
         text-align: left !important;
         padding-left: 0 !important;
@@ -1843,19 +2106,21 @@ body {
         border-bottom: 2px solid var(--border-color) !important;
         padding-bottom: 10px !important;
         margin-bottom: 6px !important;
+        font-weight: 800 !important;
+        color: var(--purple) !important;
     }
     .premium-table td:nth-of-type(1)::before {
         display: none !important;
     }
     
-    .premium-table td:nth-of-type(6) {
+    .premium-table td:nth-of-type(7) {
         display: flex !important;
         justify-content: flex-end !important;
         align-items: center !important;
         gap: 6px !important;
     }
     
-    .premium-table td:nth-of-type(7) {
+    .premium-table td:nth-of-type(9) {
         display: flex !important;
         justify-content: flex-end !important;
         align-items: center !important;
@@ -1865,6 +2130,34 @@ body {
     .hw-actions-wrapper {
         width: 100% !important;
         justify-content: flex-end !important;
+    }
+
+    /* Responsive Cabinet Map */
+    .cabinet-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    
+    .cabinet-drawer {
+        aspect-ratio: 1.8 / 1 !important;
+        padding: 8px !important;
+    }
+    
+    .cabinet-section-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+    
+    .cabinet-tab-row {
+        width: 100% !important;
+    }
+    
+    .cabinet-tab-btn {
+        flex: 1 !important;
+        text-align: center !important;
+        font-size: 11px !important;
+        padding: 6px 10px !important;
     }
 
     /* Modals & Dialogs on Mobile */
