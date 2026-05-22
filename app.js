@@ -10,6 +10,7 @@ let searchQuery = '';
 let theme = 'dark';
 let suppressAutoSync = false;
 let autoSyncTimer = null;
+let hasFetchedFromCloud = false;
 
 // DOM Elements
 const views = document.querySelectorAll('.app-view');
@@ -473,6 +474,7 @@ function renderSpools() {
             </div>
 
             <div class="spool-visual-section">
+                <!-- Large vector avatar spinning slow on hover -->
                 <div class="spool-avatar-wrapper" style="background: radial-gradient(circle, ${sp.hex}22, ${sp.hex}05); border: 1.5px solid ${sp.hex}30; box-shadow: 0 8px 20px ${sp.hex}18;">
                     <svg class="spool-avatar-icon" viewBox="0 0 24 24" fill="none" stroke="${sp.hex}" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -499,6 +501,7 @@ function renderSpools() {
 
             <div class="spool-weight-numbers" style="margin-top: auto; margin-bottom: 16px; align-items: center; justify-content: space-between;">
                 <div class="weight-rem" style="font-size: 22px; line-height: 1;">${qty} ${qty === 1 ? 'spool' : 'spools'}</div>
+                <!-- Interactive spool quantity counters -->
                 <div class="spool-counter">
                     <button class="spool-counter-btn spool-dec" data-id="${sp.id}">-</button>
                     <span class="spool-counter-val">${qty}</span>
@@ -506,6 +509,7 @@ function renderSpools() {
                 </div>
             </div>
 
+            <!-- Notes Section if exists -->
             ${sp.notes ? `<div style="font-size:11.5px; color:var(--text-muted); font-style:italic; line-height:1.4; margin-bottom: 0px; display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${sp.notes}">${sp.notes}</div>` : ''}
         `;
         
@@ -627,12 +631,14 @@ function renderHardware() {
             </td>
             <td class="text-right">
                 <div class="hw-actions-wrapper">
+                    <!-- Quantity counters -->
                     <div class="hw-counter">
                         <button class="hw-counter-btn hw-dec" data-id="${hw.id}">-</button>
                         <span class="hw-counter-val">${qty}</span>
                         <button class="hw-counter-btn hw-inc" data-id="${hw.id}">+</button>
                     </div>
 
+                    <!-- Extra action icons -->
                     <button class="icon-only-btn edit-hardware" data-id="${hw.id}" title="Edit part">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
@@ -1197,7 +1203,6 @@ function exportCSVFile(dataArray, filename) {
         if (k === 'hex') return 'HexCode';
         if (k === 'qty') return 'Quantity';
         if (k === 'reorder') return 'ReorderLimit';
-        if (k === 'name') return 'PartName';
         return k.charAt(0).toUpperCase() + k.slice(1);
     }).join(',');
 
@@ -1315,38 +1320,38 @@ async function fetchFromCloud() {
             if (data) {
                 suppressAutoSync = true;
                 
-                // Map retrieved Google Sheet Arrays BACK to internal app schema (translating the specific keys)
+                // Map retrieved data arrays back to application database schema if valid
                 if (data.spools && Array.isArray(data.spools)) {
                     spools = data.spools.map((sp, idx) => ({
-                        id: sp.id || sp.Id || `sp-cloud-${Date.now()}-${idx}`,
-                        brand: sp.Brand || sp.brand || 'Generic',
-                        material: sp.Material || sp.material || 'PLA',
-                        color: sp.Color || sp.color || 'Default',
-                        hex: sp.HexCode || sp.hex || '#6366f1',
-                        qty: Number(sp.Quantity !== undefined ? sp.Quantity : sp.qty) || 0,
-                        reorder: Number(sp.ReorderLimit !== undefined ? sp.ReorderLimit : sp.reorder) || 0,
-                        location: sp.Location || sp.location || '',
-                        notes: sp.Notes || sp.notes || ''
+                        id: sp.id || `sp-cloud-${Date.now()}-${idx}`,
+                        brand: sp.brand || 'Generic',
+                        material: sp.material || 'PLA',
+                        color: sp.color || 'Default',
+                        hex: sp.hex || '#6366f1',
+                        qty: Number(sp.qty) || 0,
+                        reorder: Number(sp.reorder) || 0,
+                        location: sp.location || '',
+                        notes: sp.notes || ''
                     }));
                 }
-                
                 if (data.hardware && Array.isArray(data.hardware)) {
                     hardware = data.hardware.map((hw, idx) => ({
-                        id: hw.id || hw.Id || `hw-cloud-${Date.now()}-${idx}`,
-                        name: hw.PartName || hw.Name || hw.name || 'Unknown Item',
-                        type: hw.Type || hw.type || 'Screw',
-                        size: hw.ThreadSize || hw.Size || hw.size || 'M3',
-                        length: hw.Length || hw.length || 'N/A',
-                        head: hw.Head || hw.head || 'N/A',
-                        material: hw.Material || hw.material || 'Stainless Steel',
-                        location: hw.Location || hw.location || '',
-                        qty: Number(hw.Quantity !== undefined ? hw.Quantity : hw.qty) || 0,
-                        reorder: Number(hw.ReorderLimit !== undefined ? hw.ReorderLimit : hw.reorder) || 20
+                        id: hw.id || `hw-cloud-${Date.now()}-${idx}`,
+                        name: hw.name || 'Unknown Item',
+                        type: hw.type || 'Screw',
+                        size: hw.size || 'M3',
+                        length: hw.length || 'N/A',
+                        head: hw.head || 'N/A',
+                        material: hw.material || 'Stainless Steel',
+                        location: hw.location || '',
+                        qty: Number(hw.qty) || 0,
+                        reorder: Number(hw.reorder) || 20
                     }));
                 }
                 
                 renderAll();
                 suppressAutoSync = false;
+                hasFetchedFromCloud = true;
                 
                 updateCloudStatusLabel('success');
                 logActivity('Successfully downloaded and merged live Google Sheets database!', 'success');
@@ -1373,6 +1378,24 @@ async function pushToCloud(isAutoSync = false) {
         return;
     }
 
+    // Safety Check: Prevent overwriting the cloud database if we haven't successfully fetched first!
+    if (!hasFetchedFromCloud) {
+        if (isAutoSync) {
+            console.warn('Auto-sync skipped: Fetch has not been performed in this session. Pull data first to avoid overwriting.');
+            return;
+        } else {
+            const confirmPush = confirm(
+                'WARNING: You have not fetched the latest data from Google Sheets in this session yet.\n\n' +
+                'Pushing now will overwrite all data in your Google Sheet with your local browser data, which may erase newer spreadsheet changes.\n\n' +
+                'Are you sure you want to overwrite the Google Sheet?'
+            );
+            if (!confirmPush) {
+                updateCloudStatusLabel('error', 'Push cancelled to prevent data loss.');
+                return;
+            }
+        }
+    }
+
     updateCloudStatusLabel('syncing');
     if (isAutoSync) {
         logActivity('Auto-syncing changes to Google Sheets...', 'info');
@@ -1381,28 +1404,27 @@ async function pushToCloud(isAutoSync = false) {
     }
 
     try {
-        // Map internal app schema UP to Google Sheets capitalized column names
         const payload = {
             spools: spools.map(sp => ({
-                Brand: sp.brand,
-                Material: sp.material,
-                Color: sp.color,
-                HexCode: sp.hex,
-                Quantity: Number(sp.qty) || 0,
-                ReorderLimit: Number(sp.reorder) || 0,
-                Location: sp.location,
-                Notes: sp.notes
+                brand: sp.brand,
+                material: sp.material,
+                color: sp.color,
+                hex: sp.hex,
+                qty: Number(sp.qty) || 0,
+                reorder: Number(sp.reorder) || 0,
+                location: sp.location,
+                notes: sp.notes
             })),
             hardware: hardware.map(hw => ({
-                PartName: hw.name,
-                Type: hw.type,
-                ThreadSize: hw.size,
-                Length: hw.length,
-                Head: hw.head,
-                Material: hw.material,
-                Location: hw.location,
-                Quantity: hw.qty,
-                ReorderLimit: hw.reorder
+                name: hw.name,
+                type: hw.type,
+                size: hw.size,
+                length: hw.length,
+                head: hw.head,
+                material: hw.material,
+                location: hw.location,
+                qty: hw.qty,
+                reorder: hw.reorder
             }))
         };
 
