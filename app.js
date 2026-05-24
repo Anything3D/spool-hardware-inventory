@@ -130,6 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Wire up Sync Actions
     setupSyncEngine();
 
+    // Wire up User Authentication Forms and Sessions
+    setupLoginHandlers();
+    const hasActiveSession = checkUserSession();
+
     // Visual elements init
     spoolColorPicker.addEventListener('input', (e) => {
         spoolHexInput.value = e.target.value;
@@ -144,12 +148,14 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAll();
     suppressAutoSync = false;
 
-    // Automatically trigger cloud pull on startup if a valid URL is pre-filled
-    const startupUrl = cloudApiUrlInput ? cloudApiUrlInput.value.trim() : '';
-    if (startupUrl) {
-        setTimeout(() => {
-            fetchFromCloud();
-        }, 300);
+    // Automatically trigger cloud pull on startup if a valid session exists and URL is pre-filled
+    if (hasActiveSession) {
+        const startupUrl = cloudApiUrlInput ? cloudApiUrlInput.value.trim() : '';
+        if (startupUrl) {
+            setTimeout(() => {
+                fetchFromCloud();
+            }, 300);
+        }
     }
 });
 
@@ -1726,5 +1732,234 @@ function populateMaterialAndSizeFilters() {
         <option value="other">Other/Non-metric</option>
     `;
     filterHardwareSize.value = currentSizeVal;
+}
+
+// ==========================================================================
+// GOOGLE SHEETS USER SESSIONS & AUTHENTICATION CONTROLLERS
+// ==========================================================================
+
+function checkUserSession() {
+    const sessionText = localStorage.getItem('nexis_user_session');
+    const loginScreen = document.getElementById('login-screen');
+    const appContainer = document.querySelector('.app-container');
+
+    if (sessionText) {
+        try {
+            const session = JSON.parse(sessionText);
+            const now = Date.now();
+            const lifespan = 7 * 24 * 60 * 60 * 1000; // 7 days session expiration
+            
+            if (session.loggedIn && (now - session.timestamp < lifespan)) {
+                // Active, valid session! Show inventory dashboard directly
+                if (loginScreen) loginScreen.classList.add('hidden');
+                if (appContainer) appContainer.classList.remove('hidden');
+                
+                // Prefill user profile footer avatar
+                const nameNode = document.querySelector('.sidebar-footer .user-name');
+                if (nameNode && session.username) {
+                    const dispName = session.username.charAt(0).toUpperCase() + session.username.slice(1);
+                    nameNode.textContent = dispName;
+                    
+                    const avatarNode = document.querySelector('.sidebar-footer .user-avatar');
+                    if (avatarNode) {
+                        avatarNode.textContent = dispName.charAt(0).toUpperCase();
+                    }
+                }
+                return true;
+            }
+        } catch (e) {
+            console.error("Session check failed:", e);
+        }
+    }
+    
+    // No session or expired: Display login card and keep dashboard hidden
+    if (loginScreen) loginScreen.classList.remove('hidden');
+    if (appContainer) appContainer.classList.add('hidden');
+    
+    // Prefill linked Google Sheets Web App URL if pre-configured
+    const savedUrl = localStorage.getItem('nexis_cloud_url');
+    if (savedUrl && document.getElementById('login-cloud-url')) {
+        document.getElementById('login-cloud-url').value = savedUrl;
+    }
+    
+    return false;
+}
+
+function setupLoginHandlers() {
+    const loginForm = document.getElementById('form-login');
+    const loginSubmitBtn = document.getElementById('btn-login-submit');
+    const loginErrorAlert = document.getElementById('login-error-alert');
+    const loginErrorMsg = document.getElementById('login-error-msg');
+    
+    if (!loginForm) return;
+
+    // 1. Password Visibility Eye Toggle
+    const btnTogglePassword = document.getElementById('btn-toggle-password');
+    const passwordInput = document.getElementById('login-password');
+    if (btnTogglePassword && passwordInput) {
+        btnTogglePassword.addEventListener('click', () => {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                btnTogglePassword.querySelector('svg').style.color = 'var(--primary)';
+            } else {
+                passwordInput.type = 'password';
+                btnTogglePassword.querySelector('svg').style.color = 'var(--text-muted)';
+            }
+        });
+    }
+    
+    // 2. Sliding Expander: Google Sheets link configuration
+    const btnToggleLoginConfig = document.getElementById('btn-toggle-login-config');
+    const loginConfigFields = document.getElementById('login-config-fields');
+    if (btnToggleLoginConfig && loginConfigFields) {
+        btnToggleLoginConfig.addEventListener('click', () => {
+            btnToggleLoginConfig.classList.toggle('active');
+            loginConfigFields.classList.toggle('hidden');
+            loginConfigFields.classList.toggle('expanded');
+        });
+    }
+    
+    // 3. Real-Time Secure Sign In Request
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const username = document.getElementById('login-username').value.trim();
+        const password = passwordInput ? passwordInput.value.trim() : '';
+        const customUrl = document.getElementById('login-cloud-url').value.trim();
+        
+        // Save user's Web App link in local storage if provided
+        if (customUrl) {
+            localStorage.setItem('nexis_cloud_url', customUrl);
+            if (cloudApiUrlInput) {
+                cloudApiUrlInput.value = customUrl;
+            }
+        }
+        
+        const url = customUrl || localStorage.getItem('nexis_cloud_url') || '';
+        
+        if (!url) {
+            loginErrorMsg.innerText = "Sheets Database Link required. Please paste your Google Apps Script URL first.";
+            loginErrorAlert.classList.remove('hidden');
+            return;
+        }
+        
+        // Transition button to loading status
+        loginSubmitBtn.disabled = true;
+        const originalText = loginSubmitBtn.innerHTML;
+        loginSubmitBtn.innerHTML = `<span>Signing in...</span>`;
+        loginErrorAlert.classList.add('hidden');
+        
+        try {
+            // Trigger POST authentication check (case-insensitive username/password check on the sheet)
+            const response = await fetch(url, {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify({
+                    action: 'login',
+                    username: username,
+                    password: password
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server returned HTTP status ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                // Success! Set session parameters
+                localStorage.setItem('nexis_user_session', JSON.stringify({
+                    loggedIn: true,
+                    username: username.toLowerCase(),
+                    timestamp: Date.now()
+                }));
+                
+                logActivity(`User "${username}" signed in successfully`, 'success');
+                
+                // Play premium sliding visual page transition animations
+                const loginScreen = document.getElementById('login-screen');
+                const appContainer = document.querySelector('.app-container');
+                
+                if (loginScreen && appContainer) {
+                    loginScreen.classList.add('slide-out-left');
+                    
+                    setTimeout(() => {
+                        loginScreen.classList.add('hidden');
+                        loginScreen.classList.remove('slide-out-left');
+                        
+                        appContainer.classList.remove('hidden');
+                        appContainer.classList.add('slide-in-right');
+                        
+                        // Recalculate profile labels
+                        const nameNode = document.querySelector('.sidebar-footer .user-name');
+                        if (nameNode) {
+                            const dispName = username.charAt(0).toUpperCase() + username.slice(1);
+                            nameNode.textContent = dispName;
+                            
+                            const avatarNode = document.querySelector('.sidebar-footer .user-avatar');
+                            if (avatarNode) {
+                                avatarNode.textContent = dispName.charAt(0).toUpperCase();
+                            }
+                        }
+                        
+                        // Load inventory database and execute live fetch pull
+                        suppressAutoSync = true;
+                        loadDatabase();
+                        renderAll();
+                        suppressAutoSync = false;
+                        
+                        fetchFromCloud(); // Pull live sheet data automatically
+                        
+                        setTimeout(() => {
+                            appContainer.classList.remove('slide-in-right');
+                        }, 500);
+                    }, 500);
+                }
+            } else {
+                throw new Error(result.message || 'Invalid username or password.');
+            }
+        } catch (err) {
+            console.error('Authentication request failed:', err);
+            loginErrorMsg.innerText = `${err.message}`;
+            loginErrorAlert.classList.remove('hidden');
+            
+            // Restore buttons
+            loginSubmitBtn.disabled = false;
+            loginSubmitBtn.innerHTML = originalText;
+        }
+    });
+
+    // 4. Sidebar Footer Logout Action Button
+    const btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            if (confirm("Are you sure you want to sign out of the organizer?")) {
+                localStorage.removeItem('nexis_user_session');
+                
+                const loginScreen = document.getElementById('login-screen');
+                const appContainer = document.querySelector('.app-container');
+                
+                if (loginForm) loginForm.reset();
+                if (document.getElementById('login-username')) document.getElementById('login-username').value = '';
+                if (passwordInput) passwordInput.value = '';
+                if (loginErrorAlert) loginErrorAlert.classList.add('hidden');
+                
+                // Hide dashboard and show login screen overlay
+                if (appContainer) appContainer.classList.add('hidden');
+                if (loginScreen) loginScreen.classList.remove('hidden');
+                
+                const savedUrl = localStorage.getItem('nexis_cloud_url');
+                if (savedUrl && document.getElementById('login-cloud-url')) {
+                    document.getElementById('login-cloud-url').value = savedUrl;
+                }
+                
+                logActivity("User signed out from active session", "info");
+            }
+        });
+    }
 }
 

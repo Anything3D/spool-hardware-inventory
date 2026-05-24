@@ -12,7 +12,74 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="app-container">
+    <!-- PREMIUM REAL-TIME AUTHENTICATION VIEW -->
+    <div id="login-screen" class="login-wrapper">
+        <div class="login-card glass-panel">
+            <div class="login-brand">
+                <div class="login-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div class="login-text" style="display:flex; flex-direction:column;">
+                    <span class="brand-title" style="font-family: var(--font-heading); font-size: 24px; font-weight: 800; background: linear-gradient(to right, var(--text-primary), var(--text-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Nexis</span>
+                    <span class="brand-subtitle" style="font-size: 8px; font-weight: 700; letter-spacing: 2px; color: var(--primary);">INVENTORY ORGANIZER</span>
+                </div>
+            </div>
+
+            <p class="login-desc" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px; margin-top: 12px; text-align: center;">Sign in to securely synchronize and manage your workshop filaments and hardware database.</p>
+
+            <!-- Error Notification Alert Bubble -->
+            <div id="login-error-alert" class="login-alert-bubble hidden" style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--border-radius-md); color: var(--danger); font-size: 12.5px; font-weight: 600; margin-bottom: 20px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span id="login-error-msg">Invalid username or password.</span>
+            </div>
+
+            <form id="form-login" class="login-form" style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="login-username">Username</label>
+                    <div class="input-icon-wrapper" style="position: relative; width: 100%;">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <input type="text" id="login-username" placeholder="Enter username" style="padding-left: 42px; background-color: var(--bg-surface-elevated); border: 1px solid rgba(255, 255, 255, 0.12);" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="login-password">Password</label>
+                    <div class="input-icon-wrapper" style="position: relative; width: 100%;">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <input type="password" id="login-password" placeholder="Enter password" style="padding-left: 42px; padding-right: 42px; background-color: var(--bg-surface-elevated); border: 1px solid rgba(255, 255, 255, 0.12);" required>
+                        <button type="button" class="eye-toggle-btn" id="btn-toggle-password" title="Show/Hide Password" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
+                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Expander to configure Sheets Web App URL directly on login card -->
+                <div class="login-config-expander" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 4px;">
+                    <button type="button" id="btn-toggle-login-config" class="expander-trigger-btn" style="display: flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-heading); font-size: 12.5px; font-weight: 600; cursor: pointer; width: 100%; transition: var(--transition-smooth);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px; transition: transform 0.3s ease;"><path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.3-2-1.5-3.8-3.2-4.8L20 4H12v8l2.5-2.5c1.2.7 2 2 2.2 3.5.2.9 0 1.8-.4 2.6l4.9 3.9z"></path></svg>
+                        <span>Link Google Sheets Database</span>
+                    </button>
+                    <div id="login-config-fields" class="expander-content hidden" style="margin-top: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="login-cloud-url" style="font-size: 11px;">Google Web App URL</label>
+                            <input type="text" id="login-cloud-url" placeholder="https://script.google.com/macros/s/.../exec" style="background-color: var(--bg-surface-elevated); border: 1px solid rgba(255, 255, 255, 0.12);">
+                            <span class="field-help" style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; display: block; line-height: 1.4;">Paste your deployed Google Apps Script Web App URL to load credentials and sync live.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-login-submit" class="primary-btn full-width login-submit-btn" style="margin-top: 8px; justify-content: center; height: 42px;">
+                    <span>Sign In</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-container hidden">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="logo-area">
@@ -49,12 +116,17 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar">M</div>
-                    <div class="user-info">
-                        <span class="user-name">Maker Stock</span>
-                        <span class="user-role">Administrator</span>
+                <div class="user-profile" style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px; overflow: hidden;">
+                        <div class="user-avatar" style="flex-shrink: 0;">M</div>
+                        <div class="user-info" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <span class="user-name">Maker Stock</span>
+                            <span class="user-role">Administrator</span>
+                        </div>
                     </div>
+                    <button class="icon-only-btn logout-btn" id="btn-logout" title="Sign out of database" style="flex-shrink: 0; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--border-radius-sm); transition: var(--transition-smooth);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 16px; height: 16px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
                 </div>
             </div>
         </aside>
