@@ -2258,6 +2258,169 @@ function setupProjectHandlers() {
             renderProjects();
         });
     }
+
+    // 8. Workbench Details View Event Listeners & Sticky Note modal notepad handlers
+    const btnProjectDetailBack = document.getElementById('btn-project-detail-back');
+    if (btnProjectDetailBack) {
+        btnProjectDetailBack.addEventListener('click', () => {
+            activeProjectId = null;
+            switchTab('projects');
+        });
+    }
+
+    // Attach visual images in details workbench
+    const btnUploadProjImageDetails = document.getElementById('btn-upload-proj-image-details');
+    const projImageFileDetails = document.getElementById('proj-image-file-details');
+    if (btnUploadProjImageDetails && projImageFileDetails) {
+        btnUploadProjImageDetails.addEventListener('click', () => projImageFileDetails.click());
+        projImageFileDetails.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0 && activeProjectId) {
+                processMultipleFiles(e.target.files, null, null, false, (urls) => {
+                    const proj = projects.find(p => p.projectId === activeProjectId);
+                    if (proj) {
+                        const existing = (proj.imageUrls || '').split(',').map(u => u.trim()).filter(Boolean);
+                        const updated = existing.concat(urls).join(', ');
+                        proj.imageUrls = updated;
+                        logActivity(`Added ${urls.length} photo(s) to "${proj.projectName}" visual gallery`, 'success');
+                        renderAll();
+                        renderProjectDetails(activeProjectId);
+                    }
+                });
+            }
+        });
+    }
+
+    // Detail add task
+    const btnDetailAddTask = document.getElementById('btn-detail-add-task');
+    if (btnDetailAddTask) {
+        btnDetailAddTask.addEventListener('click', () => {
+            const input = document.getElementById('proj-detail-task-input');
+            const val = input.value.trim();
+            if (!val || !activeProjectId) return;
+            const proj = projects.find(p => p.projectId === activeProjectId);
+            if (proj) {
+                if (!proj.tasks) proj.tasks = [];
+                proj.tasks.push({
+                    id: 't-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                    text: val,
+                    completed: false
+                });
+                input.value = '';
+                logActivity(`Checklist update: Added task "${val}" directly on workbench`, 'success');
+                renderAll();
+                renderProjectDetails(activeProjectId);
+            }
+        });
+    }
+
+    // Detail add budget part
+    const btnDetailAddBudget = document.getElementById('btn-detail-add-budget');
+    if (btnDetailAddBudget) {
+        btnDetailAddBudget.addEventListener('click', () => {
+            const itemInput = document.getElementById('proj-detail-budget-item');
+            const costInput = document.getElementById('proj-detail-budget-cost');
+            const itemVal = itemInput.value.trim();
+            const costVal = parseFloat(costInput.value);
+            if (!itemVal || isNaN(costVal) || costVal < 0 || !activeProjectId) return;
+            const proj = projects.find(p => p.projectId === activeProjectId);
+            if (proj) {
+                if (!proj.budget) proj.budget = [];
+                proj.budget.push({
+                    id: 'b-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                    item: itemVal,
+                    cost: costVal
+                });
+                itemInput.value = '';
+                costInput.value = '';
+                logActivity(`Cost update: Logged part "${itemVal}" ($${costVal.toFixed(2)}) directly on workbench`, 'success');
+                renderAll();
+                renderProjectDetails(activeProjectId);
+            }
+        });
+    }
+
+    // Detail add diary log
+    const btnDetailAddLog = document.getElementById('btn-detail-add-log');
+    if (btnDetailAddLog) {
+        btnDetailAddLog.addEventListener('click', () => {
+            const input = document.getElementById('proj-detail-log-input');
+            const val = input.value.trim();
+            if (!val || !activeProjectId) return;
+            const proj = projects.find(p => p.projectId === activeProjectId);
+            if (proj) {
+                if (!proj.statusLog) proj.statusLog = [];
+                proj.statusLog.push({
+                    date: new Date().toISOString().split('T')[0],
+                    note: val
+                });
+                input.value = '';
+                logActivity(`Progress update: Logged timeline status diary entry directly on workbench`, 'success');
+                renderAll();
+                renderProjectDetails(activeProjectId);
+            }
+        });
+    }
+
+    // Form sticky note submit editor dialog save
+    const formStickyNote = document.getElementById('form-sticky-note');
+    if (formStickyNote) {
+        formStickyNote.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const pId = document.getElementById('sticky-note-project-id').value;
+            const fieldType = document.getElementById('sticky-note-field-type').value;
+            const textVal = document.getElementById('sticky-note-textarea').value.trim();
+            
+            const proj = projects.find(p => p.projectId === pId);
+            if (proj && fieldType) {
+                proj[fieldType] = textVal;
+                
+                // Automatically append a log entry for this action
+                if (!proj.statusLog) proj.statusLog = [];
+                const fieldLabel = fieldType === 'lessonsLearned' ? 'Lessons Learned' : 'Next Steps / Future Plans';
+                proj.statusLog.push({
+                    date: new Date().toISOString().split('T')[0],
+                    note: `Updated ${fieldLabel} sticky note`
+                });
+                
+                logActivity(`Sticky Note update: Revised ${fieldLabel} for "${proj.projectName}"`, 'success');
+                renderAll();
+                if (activeProjectId === pId) {
+                    renderProjectDetails(pId);
+                }
+            }
+            
+            const modalStickyNote = document.getElementById('modal-sticky-note');
+            if (modalStickyNote) modalStickyNote.close();
+        });
+    }
+
+    const btnCloseStickyNoteModal = document.getElementById('btn-close-sticky-note-modal');
+    if (btnCloseStickyNoteModal) {
+        btnCloseStickyNoteModal.addEventListener('click', () => {
+            const modalStickyNote = document.getElementById('modal-sticky-note');
+            if (modalStickyNote) modalStickyNote.close();
+        });
+    }
+
+    const btnCancelStickyNote = document.getElementById('btn-cancel-sticky-note');
+    if (btnCancelStickyNote) {
+        btnCancelStickyNote.addEventListener('click', () => {
+            const modalStickyNote = document.getElementById('modal-sticky-note');
+            if (modalStickyNote) modalStickyNote.close();
+        });
+    }
+
+    // Modal creation local images attachment
+    const btnUploadProjImage = document.getElementById('btn-upload-proj-image');
+    const projImageFile = document.getElementById('proj-image-file');
+    if (btnUploadProjImage && projImageFile) {
+        btnUploadProjImage.addEventListener('click', () => projImageFile.click());
+        projImageFile.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                processMultipleFiles(e.target.files, 'proj-imageUrls', 'proj-image-upload-status', true);
+            }
+        });
+    }
 }
 
 // Toggle visibility of End Date and Closure Remarks fields based on Selected Stage
@@ -3230,173 +3393,7 @@ function jumpToCarouselSlide(projId, slideIndex) {
     }
 }
 
-// 5. Workbench Details View Event Listeners & Sticky Note modal notepad handlers
-const oldSetupProjectHandlers = setupProjectHandlers;
-setupProjectHandlers = function() {
-    oldSetupProjectHandlers();
-    
-    const btnProjectDetailBack = document.getElementById('btn-project-detail-back');
-    if (btnProjectDetailBack) {
-        btnProjectDetailBack.addEventListener('click', () => {
-            activeProjectId = null;
-            switchTab('projects');
-        });
-    }
 
-    // Attach visual images in details workbench
-    const btnUploadProjImageDetails = document.getElementById('btn-upload-proj-image-details');
-    const projImageFileDetails = document.getElementById('proj-image-file-details');
-    if (btnUploadProjImageDetails && projImageFileDetails) {
-        btnUploadProjImageDetails.addEventListener('click', () => projImageFileDetails.click());
-        projImageFileDetails.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0 && activeProjectId) {
-                processMultipleFiles(e.target.files, null, null, false, (urls) => {
-                    const proj = projects.find(p => p.projectId === activeProjectId);
-                    if (proj) {
-                        const existing = (proj.imageUrls || '').split(',').map(u => u.trim()).filter(Boolean);
-                        const updated = existing.concat(urls).join(', ');
-                        proj.imageUrls = updated;
-                        logActivity(`Added ${urls.length} photo(s) to "${proj.projectName}" visual gallery`, 'success');
-                        renderAll();
-                        renderProjectDetails(activeProjectId);
-                    }
-                });
-            }
-        });
-    }
-
-    // Detail add task
-    const btnDetailAddTask = document.getElementById('btn-detail-add-task');
-    if (btnDetailAddTask) {
-        btnDetailAddTask.addEventListener('click', () => {
-            const input = document.getElementById('proj-detail-task-input');
-            const val = input.value.trim();
-            if (!val || !activeProjectId) return;
-            const proj = projects.find(p => p.projectId === activeProjectId);
-            if (proj) {
-                if (!proj.tasks) proj.tasks = [];
-                proj.tasks.push({
-                    id: 't-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-                    text: val,
-                    completed: false
-                });
-                input.value = '';
-                logActivity(`Checklist update: Added task "${val}" directly on workbench`, 'success');
-                renderAll();
-                renderProjectDetails(activeProjectId);
-            }
-        });
-    }
-
-    // Detail add budget part
-    const btnDetailAddBudget = document.getElementById('btn-detail-add-budget');
-    if (btnDetailAddBudget) {
-        btnDetailAddBudget.addEventListener('click', () => {
-            const itemInput = document.getElementById('proj-detail-budget-item');
-            const costInput = document.getElementById('proj-detail-budget-cost');
-            const itemVal = itemInput.value.trim();
-            const costVal = parseFloat(costInput.value);
-            if (!itemVal || isNaN(costVal) || costVal < 0 || !activeProjectId) return;
-            const proj = projects.find(p => p.projectId === activeProjectId);
-            if (proj) {
-                if (!proj.budget) proj.budget = [];
-                proj.budget.push({
-                    id: 'b-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-                    item: itemVal,
-                    cost: costVal
-                });
-                itemInput.value = '';
-                costInput.value = '';
-                logActivity(`Cost update: Logged part "${itemVal}" ($${costVal.toFixed(2)}) directly on workbench`, 'success');
-                renderAll();
-                renderProjectDetails(activeProjectId);
-            }
-        });
-    }
-
-    // Detail add diary log
-    const btnDetailAddLog = document.getElementById('btn-detail-add-log');
-    if (btnDetailAddLog) {
-        btnDetailAddLog.addEventListener('click', () => {
-            const input = document.getElementById('proj-detail-log-input');
-            const val = input.value.trim();
-            if (!val || !activeProjectId) return;
-            const proj = projects.find(p => p.projectId === activeProjectId);
-            if (proj) {
-                if (!proj.statusLog) proj.statusLog = [];
-                proj.statusLog.push({
-                    date: new Date().toISOString().split('T')[0],
-                    note: val
-                });
-                input.value = '';
-                logActivity(`Progress update: Logged timeline status diary entry directly on workbench`, 'success');
-                renderAll();
-                renderProjectDetails(activeProjectId);
-            }
-        });
-    }
-
-    // Form sticky note submit editor dialog save
-    const formStickyNote = document.getElementById('form-sticky-note');
-    if (formStickyNote) {
-        formStickyNote.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const pId = document.getElementById('sticky-note-project-id').value;
-            const fieldType = document.getElementById('sticky-note-field-type').value;
-            const textVal = document.getElementById('sticky-note-textarea').value.trim();
-            
-            const proj = projects.find(p => p.projectId === pId);
-            if (proj && fieldType) {
-                proj[fieldType] = textVal;
-                
-                // Automatically append a log entry for this action
-                if (!proj.statusLog) proj.statusLog = [];
-                const fieldLabel = fieldType === 'lessonsLearned' ? 'Lessons Learned' : 'Next Steps / Future Plans';
-                proj.statusLog.push({
-                    date: new Date().toISOString().split('T')[0],
-                    note: `Updated ${fieldLabel} sticky note`
-                });
-                
-                logActivity(`Sticky Note update: Revised ${fieldLabel} for "${proj.projectName}"`, 'success');
-                renderAll();
-                if (activeProjectId === pId) {
-                    renderProjectDetails(pId);
-                }
-            }
-            
-            const modalStickyNote = document.getElementById('modal-sticky-note');
-            if (modalStickyNote) modalStickyNote.close();
-        });
-    }
-
-    const btnCloseStickyNoteModal = document.getElementById('btn-close-sticky-note-modal');
-    if (btnCloseStickyNoteModal) {
-        btnCloseStickyNoteModal.addEventListener('click', () => {
-            const modalStickyNote = document.getElementById('modal-sticky-note');
-            if (modalStickyNote) modalStickyNote.close();
-        });
-    }
-
-    const btnCancelStickyNote = document.getElementById('btn-cancel-sticky-note');
-    if (btnCancelStickyNote) {
-        btnCancelStickyNote.addEventListener('click', () => {
-            const modalStickyNote = document.getElementById('modal-sticky-note');
-            if (modalStickyNote) modalStickyNote.close();
-        });
-    }
-
-    // Modal creation local images attachment
-    const btnUploadProjImage = document.getElementById('btn-upload-proj-image');
-    const projImageFile = document.getElementById('proj-image-file');
-    if (btnUploadProjImage && projImageFile) {
-        btnUploadProjImage.addEventListener('click', () => projImageFile.click());
-        projImageFile.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                processMultipleFiles(e.target.files, 'proj-imageUrls', 'proj-image-upload-status', true);
-            }
-        });
-    }
-};
 
 function openStickyNoteEditor(projectId, fieldType) {
     const proj = projects.find(p => p.projectId === projectId);
