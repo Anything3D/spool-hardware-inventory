@@ -343,7 +343,13 @@ function getStockLevelInfo(qtyText, minQtyText) {
     const isNumeric = !isNaN(parsedQty);
     
     // Parse custom minQty warning threshold (defaults to 10)
-    const threshold = parseInt(String(minQtyText || '10').trim(), 10) || 10;
+    let threshold = 10;
+    if (minQtyText !== undefined && minQtyText !== null && String(minQtyText).trim() !== '') {
+        const parsed = parseInt(String(minQtyText).trim(), 10);
+        if (!isNaN(parsed)) {
+            threshold = parsed;
+        }
+    }
     
     let statusLabel = 'In Stock';
     let statusClass = 'good';
@@ -826,7 +832,7 @@ function renderHardware() {
                     <span style="font-size: 11.5px; font-weight:700;">${hw.qty}</span>
                 </div>
             </td>
-            <td class="text-center" style="font-weight: 600; color: var(--text-secondary);">${hw.minQty || '10'}</td>
+            <td class="text-center" style="font-weight: 600; color: var(--text-secondary);">${hw.minQty !== undefined && hw.minQty !== null && hw.minQty !== '' ? hw.minQty : '10'}</td>
             <td style="color: var(--text-secondary); font-size: 13px;">${hw.remarks || 'N/A'}</td>
             <td class="text-right">
                 <div class="hw-actions-wrapper">
@@ -1122,7 +1128,7 @@ function openEditHardwareModal(id) {
     document.getElementById('hw-sizeW').value = hw.sizeW || '';
     document.getElementById('hw-sizeT').value = hw.sizeT || '';
     document.getElementById('hw-qty').value = hw.qty || '0';
-    document.getElementById('hw-minQty').value = hw.minQty || '10';
+    document.getElementById('hw-minQty').value = hw.minQty !== undefined && hw.minQty !== null && hw.minQty !== '' ? hw.minQty : '10';
     document.getElementById('hw-remarks').value = hw.remarks || '';
 
     modalHardware.showModal();
@@ -1138,7 +1144,7 @@ function saveHardwareForm() {
         sizeW: document.getElementById('hw-sizeW').value.trim() || '',
         sizeT: document.getElementById('hw-sizeT').value.trim() || '',
         qty: document.getElementById('hw-qty').value.trim() || '0',
-        minQty: parseInt(document.getElementById('hw-minQty').value) || 10,
+        minQty: !isNaN(parseInt(document.getElementById('hw-minQty').value, 10)) ? parseInt(document.getElementById('hw-minQty').value, 10) : 10,
         remarks: document.getElementById('hw-remarks').value.trim() || ''
     };
 
@@ -1622,7 +1628,7 @@ async function pushToCloud(isAutoSync = false) {
                 sizeW: hw.sizeW,
                 sizeT: hw.sizeT,
                 qty: hw.qty,
-                minQty: hw.minQty || '10',
+                minQty: hw.minQty !== undefined && hw.minQty !== null && hw.minQty !== '' ? hw.minQty : '10',
                 remarks: hw.remarks
             }))
         };
