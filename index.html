@@ -274,6 +274,7 @@
                                         <th class="text-center">Size (W)</th>
                                         <th class="text-center">Size (T)</th>
                                         <th class="text-center">Qty</th>
+                                        <th class="text-center">Min Qty</th>
                                         <th>Remarks</th>
                                         <th class="text-right">Actions</th>
                                     </tr>
@@ -281,7 +282,7 @@
                                 <tbody id="hardware-list-tbody">
                                     <!-- Dynamic rows loaded by JS -->
                                     <tr>
-                                        <td colspan="7" class="text-center">
+                                        <td colspan="10" class="text-center">
                                             <span class="loader"></span>
                                             <p>Loading hardware inventory...</p>
                                         </td>
@@ -578,9 +579,15 @@
                         <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Supports numbers (45) and string indicators (100+).</span>
                     </div>
                     <div class="form-group">
-                        <label for="hw-remarks">Remarks</label>
-                        <input type="text" id="hw-remarks" placeholder="e.g., Sticker type, brass finish">
+                        <label for="hw-minQty">Minimum Alert Quantity *</label>
+                        <input type="number" id="hw-minQty" min="0" placeholder="e.g., 10, 20" value="10" required>
+                        <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Triggers a warning when stock drops below this.</span>
                     </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hw-remarks">Remarks</label>
+                    <input type="text" id="hw-remarks" placeholder="e.g., Sticker type, brass finish">
                 </div>
 
                 <div class="modal-footer">

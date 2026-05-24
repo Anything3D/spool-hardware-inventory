@@ -89,15 +89,19 @@ const MOCK_SPOOLS = [
 ];
 
 const MOCK_HARDWARE = [
-    { id: 'hw-1', boxNo: 'A1', category: 'Magnet', specification: 'Neodymium N35', sizeLD: '6', sizeW: '', sizeT: '3', qty: '120', remarks: 'Strong cylindrical magnets' },
-    { id: 'hw-2', boxNo: 'A2', category: 'Threaded Insert', specification: 'M3 Standard', sizeLD: '4.2', sizeW: '5.8', sizeT: '4', qty: '100+', remarks: 'Brass knurled heat-set' },
-    { id: 'hw-3', boxNo: 'A3', category: 'Threaded Insert', specification: 'M3 Short', sizeLD: '4.2', sizeW: '5.8', sizeT: '3', qty: '8', remarks: 'Low stock - reorder soon' },
-    { id: 'hw-4', boxNo: 'B1', category: 'Limit Switch', specification: 'Endstop Switch', sizeLD: '20', sizeW: '10', sizeT: '6.5', qty: '15', remarks: 'For X/Y/Z axes' },
-    { id: 'hw-5', boxNo: 'B2', category: 'NFC Card', specification: '13.56MHz RFID', sizeLD: '85.6', sizeW: '54', sizeT: '0.8', qty: '20+', remarks: 'For printer access control' },
-    { id: 'hw-6', boxNo: 'C3', category: 'Screw', specification: 'M3x10 Button Head', sizeLD: '10', sizeW: '', sizeT: '3', qty: '150', remarks: 'Hex drive black alloy steel' },
-    { id: 'hw-7', boxNo: 'C4', category: 'Screw', specification: 'M3x16 Socket Cap', sizeLD: '16', sizeW: '', sizeT: '3', qty: '45', remarks: 'Stainless steel A2' },
-    { id: 'hw-8', boxNo: 'D12', category: 'Nut', specification: 'M3 Hex Nut', sizeLD: '5.5', sizeW: '', sizeT: '2.4', qty: '200', remarks: 'Zinc plated steel' },
-    { id: 'hw-9', boxNo: 'E4', category: 'Bearing', specification: '608ZZ Ball Bearing', sizeLD: '22', sizeW: '', sizeT: '7', qty: '0', remarks: 'Out of stock - critical!' }
+    { id: 'hw-1', boxNo: 'A1', category: 'Magnet', specification: 'Magnet', sizeLD: '6', sizeW: '', sizeT: '3', qty: '45', minQty: 10, remarks: 'Strong cylindrical magnets' },
+    { id: 'hw-2', boxNo: 'A2', category: 'Threaded Insert', specification: 'M3', sizeLD: '4.2', sizeW: '', sizeT: '4', qty: '2', minQty: 10, remarks: 'Brass knurled heat-set' },
+    { id: 'hw-3', boxNo: 'A3', category: 'Threaded Insert', specification: 'M3', sizeLD: '3.9', sizeW: '', sizeT: '3', qty: '100+', minQty: 10, remarks: 'Low stock - reorder soon' },
+    { id: 'hw-4', boxNo: 'A4', category: 'Threaded Insert', specification: 'M3', sizeLD: '4.2', sizeW: '', sizeT: '3', qty: '100+', minQty: 10, remarks: 'Brass knurled heat-set' },
+    { id: 'hw-5', boxNo: 'A5', category: 'Threaded Insert', specification: 'M3', sizeLD: '3.9', sizeW: '', sizeT: '3', qty: '100+', minQty: 10, remarks: 'Low stock - reorder soon' },
+    { id: 'hw-6', boxNo: 'A6', category: 'Threaded Insert', specification: 'M3', sizeLD: '4.2', sizeW: '', sizeT: '4', qty: '100+', minQty: 10, remarks: 'Hex drive black alloy steel' },
+    { id: 'hw-7', boxNo: 'A7', category: 'NFC Card', specification: 'NFC Card', sizeLD: '25', sizeW: '', sizeT: '', qty: '7', minQty: 10, remarks: 'Sticker type' },
+    { id: 'hw-8', boxNo: 'A8', category: 'Limit Switch', specification: 'Limit Switch', sizeLD: '13', sizeW: '5.8', sizeT: '6.5', qty: '9', minQty: 10, remarks: 'For X/Y/Z axes' },
+    { id: 'hw-9', boxNo: 'A9', category: 'Nozzle Scrubber', specification: 'Nozzle Scrubber', sizeLD: '36.5', sizeW: '8.5', sizeT: '3.9', qty: '11', minQty: 10, remarks: 'Used for A1 printers' },
+    { id: 'hw-10', boxNo: 'A10', category: 'Nozzle Scrubber', specification: 'Nozzle Scrubber', sizeLD: '36.5', sizeW: '8.5', sizeT: '3.9', qty: '15', minQty: 10, remarks: 'Used for A1 printers' },
+    { id: 'hw-11', boxNo: 'A11', category: 'Heat shrink tube', specification: 'Heat shrink tube', sizeLD: '', sizeW: '', sizeT: '', qty: '', minQty: 10, remarks: 'Small' },
+    { id: 'hw-12', boxNo: 'A12', category: 'Heat shrink tube', specification: 'Heat shrink tube', sizeLD: '', sizeW: '', sizeT: '', qty: '10', minQty: 10, remarks: 'Small' },
+    { id: 'hw-13', boxNo: 'A20', category: 'SHCS', specification: 'M6', sizeLD: '40', sizeW: '', sizeT: '', qty: '6', minQty: 10, remarks: 'Alloy steel' }
 ];
 
 // ==========================================================================
@@ -236,14 +240,14 @@ function loadDatabase() {
         });
     }
 
-    // Automatically migrate old hardware schema to the new 8-column layout
+    // Automatically migrate old hardware schema to the new 9-column layout
     if (hardware.length > 0) {
         let hwMigrated = false;
         hardware = hardware.map(hw => {
             if (hw.boxNo === undefined) {
                 hwMigrated = true;
                 // Old keys: id, name, type, size, length, head, material, location, qty, reorder
-                // New keys: id, boxNo, category, specification, sizeLD, sizeW, sizeT, qty, remarks
+                // New keys: id, boxNo, category, specification, sizeLD, sizeW, sizeT, qty, minQty, remarks
                 const boxNo = hw.location || 'A1';
                 const category = hw.type || 'Screw';
                 const specification = hw.size ? `${hw.size} ${hw.name || ''}`.trim() : (hw.name || 'M3');
@@ -262,7 +266,14 @@ function loadDatabase() {
                     sizeW,
                     sizeT,
                     qty,
+                    minQty: 10,
                     remarks
+                };
+            } else if (hw.minQty === undefined) {
+                hwMigrated = true;
+                return {
+                    ...hw,
+                    minQty: 10
                 };
             }
             return hw;
@@ -325,11 +336,14 @@ function logActivity(text, type = 'info') {
 }
 
 // Global Quantity Parser Helper
-function getStockLevelInfo(qtyText) {
+function getStockLevelInfo(qtyText, minQtyText) {
     const text = String(qtyText || '0').trim();
     const hasPlus = text.includes('+');
     const parsedQty = parseInt(text, 10);
     const isNumeric = !isNaN(parsedQty);
+    
+    // Parse custom minQty warning threshold (defaults to 10)
+    const threshold = parseInt(String(minQtyText || '10').trim(), 10) || 10;
     
     let statusLabel = 'In Stock';
     let statusClass = 'good';
@@ -340,7 +354,7 @@ function getStockLevelInfo(qtyText) {
     } else if (hasPlus) {
         statusLabel = 'In Stock';
         statusClass = 'good';
-    } else if (parsedQty <= 10) {
+    } else if (parsedQty <= threshold) {
         statusLabel = 'Low Stock';
         statusClass = 'low';
     } else {
@@ -397,15 +411,15 @@ function renderDashboardStats() {
 
     // 3. Hardware Pieces Total count
     const totalHwQty = hardware.reduce((acc, hw) => {
-        const stockInfo = getStockLevelInfo(hw.qty);
+        const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return acc + stockInfo.parsedQty;
     }, 0);
     dashTotalHardware.innerText = totalHwQty.toLocaleString();
     dashHardwareTypes.innerText = `${hardware.length} unique fastener types`;
 
-    // 4. Low Hardware Alert (qty <= 10 or Out of Stock)
+    // 4. Low Hardware Alert (qty <= minQty or Out of Stock)
     const lowHwCount = hardware.filter(hw => {
-        const stockInfo = getStockLevelInfo(hw.qty);
+        const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return stockInfo.statusClass === 'low' || stockInfo.statusClass === 'out';
     }).length;
     dashLowHardware.innerText = lowHwCount;
@@ -683,10 +697,19 @@ function renderCabinetGrid() {
         const drawerDiv = document.createElement('div');
         
         if (match) {
-            const stockInfo = getStockLevelInfo(match.qty);
+            const stockInfo = getStockLevelInfo(match.qty, match.minQty);
             drawerDiv.className = `cabinet-drawer drawer-${stockInfo.statusClass}`;
             if (activeCabinetFilter === boxLabel) {
                 drawerDiv.classList.add('active-filter');
+            }
+            
+            let sizeStr = '';
+            const sizes = [];
+            if (match.sizeLD) sizes.push(match.sizeLD);
+            if (match.sizeW) sizes.push(match.sizeW);
+            if (match.sizeT) sizes.push(match.sizeT);
+            if (sizes.length > 0) {
+                sizeStr = ` (${sizes.join('×')}mm)`;
             }
             
             // Occupied drawer details
@@ -697,7 +720,7 @@ function renderCabinetGrid() {
                 </div>
                 <div class="drawer-meta-bottom">
                     <span class="drawer-category">${match.category}</span>
-                    <span class="drawer-spec">${match.specification} ${match.sizeLD ? match.sizeLD + 'mm' : ''}</span>
+                    <span class="drawer-spec">${match.specification}${sizeStr}</span>
                 </div>
             `;
             
@@ -781,7 +804,7 @@ function renderHardware() {
     
     filtered.forEach(hw => {
         const tr = document.createElement('tr');
-        const stockInfo = getStockLevelInfo(hw.qty);
+        const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
 
         const sizeLDStr = hw.sizeLD && hw.sizeLD !== 'N/A' && hw.sizeLD !== '' ? `${hw.sizeLD} mm` : 'N/A';
         const sizeWStr = hw.sizeW && hw.sizeW !== 'N/A' && hw.sizeW !== '' ? `${hw.sizeW} mm` : 'N/A';
@@ -803,6 +826,7 @@ function renderHardware() {
                     <span style="font-size: 11.5px; font-weight:700;">${hw.qty}</span>
                 </div>
             </td>
+            <td class="text-center" style="font-weight: 600; color: var(--text-secondary);">${hw.minQty || '10'}</td>
             <td style="color: var(--text-secondary); font-size: 13px;">${hw.remarks || 'N/A'}</td>
             <td class="text-right">
                 <div class="hw-actions-wrapper">
@@ -893,7 +917,7 @@ function changeHardwareQty(id, diff) {
     
     hw.qty = newQtyStr;
 
-    const stockInfo = getStockLevelInfo(hw.qty);
+    const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
     if (stockInfo.statusClass === 'low' && diff < 0) {
         logActivity(`Low stock warning! "${hw.category} - ${hw.specification}" down to ${hw.qty} units`, 'warning');
     } else {
@@ -1098,6 +1122,7 @@ function openEditHardwareModal(id) {
     document.getElementById('hw-sizeW').value = hw.sizeW || '';
     document.getElementById('hw-sizeT').value = hw.sizeT || '';
     document.getElementById('hw-qty').value = hw.qty || '0';
+    document.getElementById('hw-minQty').value = hw.minQty || '10';
     document.getElementById('hw-remarks').value = hw.remarks || '';
 
     modalHardware.showModal();
@@ -1113,6 +1138,7 @@ function saveHardwareForm() {
         sizeW: document.getElementById('hw-sizeW').value.trim() || '',
         sizeT: document.getElementById('hw-sizeT').value.trim() || '',
         qty: document.getElementById('hw-qty').value.trim() || '0',
+        minQty: parseInt(document.getElementById('hw-minQty').value) || 10,
         remarks: document.getElementById('hw-remarks').value.trim() || ''
     };
 
@@ -1339,6 +1365,7 @@ function runCSVImport(csvText) {
             const sizeW = getVal(['w', 'size (w)', 'width']);
             const sizeT = getVal(['t', 'size (t)', 'thickness', 'thickness / height', 'height']);
             const qty = String(getVal(['qty', 'quantity', 'count']) || '0').trim();
+            const minQty = String(getVal(['min qty', 'minqty', 'minimum alert quantity', 'min']) || '10').trim();
             const remarks = getVal(['remarks', 'notes', 'comment', 'headtype', 'head', 'material']);
 
             parsedHardware.push({
@@ -1350,6 +1377,7 @@ function runCSVImport(csvText) {
                 sizeW,
                 sizeT,
                 qty,
+                minQty,
                 remarks
             });
         }
@@ -1378,8 +1406,8 @@ function exportCSVFile(dataArray, filename) {
         headersLine = 'Brand,Material,Color,HexCode,Quantity,ReorderLimit,Location,Notes';
         keys = ['brand', 'material', 'color', 'hex', 'qty', 'reorder', 'location', 'notes'];
     } else {
-        headersLine = 'Box No.,Category,Specification,L/D,W,T,Qty,Remarks';
-        keys = ['boxNo', 'category', 'specification', 'sizeLD', 'sizeW', 'sizeT', 'qty', 'remarks'];
+        headersLine = 'Box No.,Category,Specification,L/D,W,T,Qty,Min Qty,Remarks';
+        keys = ['boxNo', 'category', 'specification', 'sizeLD', 'sizeW', 'sizeT', 'qty', 'minQty', 'remarks'];
     }
 
     const rows = dataArray.map(item => {
@@ -1516,6 +1544,7 @@ async function fetchFromCloud() {
                         sizeW: hw.sizeW !== undefined ? String(hw.sizeW) : '',
                         sizeT: hw.sizeT !== undefined ? String(hw.sizeT) : '',
                         qty: hw.qty !== undefined ? String(hw.qty).trim() : '0',
+                        minQty: hw.minQty !== undefined ? String(hw.minQty).trim() : '10',
                         remarks: hw.remarks || ''
                     }));
                 }
@@ -1593,6 +1622,7 @@ async function pushToCloud(isAutoSync = false) {
                 sizeW: hw.sizeW,
                 sizeT: hw.sizeT,
                 qty: hw.qty,
+                minQty: hw.minQty || '10',
                 remarks: hw.remarks
             }))
         };

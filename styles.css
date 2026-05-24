@@ -14,8 +14,8 @@
     --border-focus: rgba(99, 102, 241, 0.4);
 
     --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --text-secondary: #cbd5e1; /* High-contrast bright slate-300 */
+    --text-muted: #94a3b8; /* Highly visible bright slate-400 */
 
     /* UI Accents - Harmonious Tailwind/Radix style HSL colors */
     --primary: #6366f1; /* Indigo */
@@ -304,8 +304,8 @@ body {
 .search-wrapper input {
     width: 100%;
     padding: 10px 14px 10px 42px;
-    background-color: var(--bg-base);
-    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface-elevated);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--border-radius-md);
     color: var(--text-primary);
     font-size: 13px;
@@ -1360,11 +1360,12 @@ body {
 .modal-content input[type="text"],
 .modal-content input[type="number"],
 .modal-content select,
-.modal-content textarea {
+.modal-content textarea,
+#cloud-api-url {
     width: 100%;
     padding: 10px 14px;
-    background-color: var(--bg-base);
-    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface-elevated);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--border-radius-md);
     color: var(--text-primary);
     font-family: var(--font-body);
@@ -1376,9 +1377,36 @@ body {
 .modal-content input[type="text"]:focus,
 .modal-content input[type="number"]:focus,
 .modal-content select:focus,
-.modal-content textarea:focus {
+.modal-content textarea:focus,
+#cloud-api-url:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--border-focus);
+    background-color: var(--bg-surface);
+}
+
+/* Perfect Placeholder Contrast in Both Themes */
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* Explicit Select Dropdown Option Colors to Prevent Windows High-Contrast Bugs */
+.modal-content select option,
+.select-filter option {
+    background-color: var(--bg-surface-elevated);
+    color: var(--text-primary);
+}
+
+/* Ensure Global Table Counter values are highly visible */
+.hw-counter-val {
+    padding: 0 10px;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    min-width: 32px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-primary);
 }
 
 .color-input-wrapper {
@@ -1390,8 +1418,8 @@ body {
 .color-input-wrapper input[type="color"] {
     width: 44px;
     height: 38px;
-    border: 1px solid var(--border-color);
-    background-color: var(--bg-base);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-color: var(--bg-surface-elevated);
     border-radius: var(--border-radius-md);
     cursor: pointer;
     padding: 0;
@@ -1721,7 +1749,7 @@ body {
 
 .drawer-label {
     font-family: var(--font-heading);
-    font-size: 12.5px;
+    font-size: 16px; /* Significantly enlarged prominent label */
     font-weight: 800;
     color: var(--text-primary);
     letter-spacing: 0.5px;
@@ -1729,22 +1757,22 @@ body {
 
 .drawer-qty-badge {
     font-family: var(--font-heading);
-    font-size: 11px;
+    font-size: 13px; /* Enlarged for maximum scanability */
     font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 4px 9px;
+    border-radius: 6px;
 }
 
 .drawer-meta-bottom {
     display: flex;
     flex-direction: column;
     width: 100%;
-    margin-top: 4px;
+    margin-top: 10px; /* Better vertical breathing space */
 }
 
 .drawer-category {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 18px; /* Significantly enlarged to beautifully fill box proportions */
+    font-weight: 800;
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
@@ -1753,17 +1781,18 @@ body {
 }
 
 .drawer-spec {
-    font-size: 11px;
+    font-size: 14px; /* Enlarged size text for detailed reading */
     color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
-/* Visual States - Unified dark-slate backing with colored indicator badges */
+/* Visual States - Beautifully elevated drawer trays with dynamic stock alert backings */
 .drawer-good {
-    /* Kept clean, standard borders */
+    background-color: var(--bg-surface-elevated) !important;
+    border-color: rgba(99, 102, 241, 0.25) !important;
 }
 .drawer-good .drawer-qty-badge {
     background-color: rgba(16, 185, 129, 0.12);
@@ -1772,7 +1801,9 @@ body {
 }
 
 .drawer-low {
-    /* Kept clean, standard borders */
+    background-color: rgba(245, 158, 11, 0.04) !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.05), var(--shadow-sm);
 }
 .drawer-low .drawer-qty-badge {
     background-color: rgba(245, 158, 11, 0.12);
@@ -1781,7 +1812,10 @@ body {
 }
 
 .drawer-out {
-    /* Kept clean, standard borders */
+    background-color: rgba(239, 68, 68, 0.05) !important;
+    border-color: rgba(239, 68, 68, 0.45) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.05), var(--shadow-sm);
+    animation: drawer-danger-glow 2s infinite ease-in-out;
 }
 .drawer-out .drawer-qty-badge {
     background-color: rgba(239, 68, 68, 0.12);
@@ -2208,6 +2242,27 @@ body {
     .modal-header h2 {
         font-size: 18px !important;
     }
+}
+
+/* Solid, High-Contrast Modal Backplane for perfect readability in Dark Mode */
+.custom-modal .modal-content {
+    background-color: var(--bg-surface) !important;
+    background-image: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: var(--shadow-premium), 0 20px 25px -5px rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: none !important;
+}
+
+/* Light theme support override for solid modal background */
+[data-theme="light"] .custom-modal .modal-content {
+    background-color: var(--bg-surface) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    box-shadow: var(--shadow-premium) !important;
+}
+
+/* High-Contrast Table Header Background */
+.premium-table thead tr {
+    background-color: var(--bg-surface-elevated) !important;
 }
 
 
