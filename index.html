@@ -448,6 +448,136 @@
                     </div>
                 </section>
 
+                <!-- 4b. PROJECT DETAILS WORKBENCH VIEW [NEW] -->
+                <section id="view-project-details" class="app-view">
+                    <div class="view-header-row" style="align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px;">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <button type="button" class="secondary-btn" id="btn-project-detail-back" style="padding: 8px 14px; font-size: 13px; font-weight: 700; border-radius: var(--border-radius-md);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 16px; height: 16px; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                                Back to Board
+                            </button>
+                            <div>
+                                <h1 id="proj-detail-name" style="font-family: var(--font-heading); font-size: 26px; font-weight: 800; color: var(--text-primary);">Project Workbench</h1>
+                                <p class="subtitle" id="proj-detail-desc" style="font-size: 13.5px; color: var(--text-muted); font-style: italic; margin-top: 4px;">Detail workbench view</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="status-pill good" id="proj-detail-status-pill">
+                                <span class="status-indicator"></span>
+                                <span id="proj-detail-status">In Progress</span>
+                            </span>
+                            <span id="proj-detail-duration" style="font-size: 12px; font-weight: 700; color: var(--text-secondary); background-color: var(--bg-surface-elevated); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);">Active: 0 days open</span>
+                        </div>
+                    </div>
+
+                    <!-- Split Grids Workbench Layout -->
+                    <div class="workbench-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: start; margin-bottom: 32px;">
+                        
+                        <!-- Left Column: Media Gallery, Checklist, and Budgets -->
+                        <div style="display: flex; flex-direction: column; gap: 32px;">
+                            
+                            <!-- Large Image Gallery Workbench -->
+                            <div class="glass-panel" style="padding: 24px;">
+                                <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">Build Visual Gallery</h3>
+                                <div id="proj-detail-carousel-target">
+                                    <!-- Image carousel dynamically populated -->
+                                </div>
+                                <div class="image-upload-wrapper" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                                    <div>
+                                        <h5 style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary);">Attach New Build Photos</h5>
+                                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Convert and compress local files into database image sliders</p>
+                                    </div>
+                                    <div>
+                                        <input type="file" id="proj-image-file-details" accept="image/*" multiple style="display: none;">
+                                        <button type="button" class="primary-btn" id="btn-upload-proj-image-details" style="padding: 8px 14px; font-size: 12px; box-shadow: none;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                            Upload Images
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Task Checklist Workbench -->
+                            <div class="glass-panel" style="padding: 24px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">Interactive Task Checklist</h3>
+                                    <span id="proj-detail-progress-percent" style="font-size: 13px; font-weight: 800; color: var(--primary);">0% Completed</span>
+                                </div>
+                                <div class="project-progress-outer" style="margin-bottom: 20px; height: 8px;">
+                                    <div class="project-progress-inner" id="proj-detail-progress-inner" style="width: 0%;"></div>
+                                </div>
+                                
+                                <!-- Add Task Inline Row -->
+                                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                    <input type="text" id="proj-detail-task-input" placeholder="e.g. Wire printhead heater cartridge..." style="flex: 1; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
+                                    <button type="button" class="secondary-btn" id="btn-detail-add-task" style="padding: 8px 14px; font-size: 12.5px;">Add Task</button>
+                                </div>
+                                <ul id="proj-detail-tasks-list-container" style="display: flex; flex-direction: column; gap: 10px; list-style: none; padding-left: 0; max-height: 250px; overflow-y: auto;">
+                                    <!-- Populated dynamically -->
+                                </ul>
+                            </div>
+
+                            <!-- Parts Budget Tracker Workbench -->
+                            <div class="glass-panel" style="padding: 24px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                                    <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">Parts Budget Cost Ledger</h3>
+                                    <div style="text-align: right;">
+                                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; letter-spacing: 0.5px;">Total Spent</span>
+                                        <span id="proj-detail-spend-badge" style="font-size: 18px; font-weight: 800; color: var(--secondary);">$0.00</span>
+                                    </div>
+                                </div>
+
+                                <!-- Add Budget Part Inline Row -->
+                                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                                    <input type="text" id="proj-detail-budget-item" placeholder="Part description..." style="flex: 2; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
+                                    <input type="number" id="proj-detail-budget-cost" min="0" step="0.01" placeholder="$ Price" style="flex: 1; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
+                                    <button type="button" class="secondary-btn" id="btn-detail-add-budget" style="padding: 8px 14px; font-size: 12.5px;">Add Part</button>
+                                </div>
+
+                                <div style="max-height: 250px; overflow-y: auto;">
+                                    <table class="project-card-budget-table" style="width: 100%;">
+                                        <thead>
+                                            <tr>
+                                                <th style="font-size: 12.5px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px;">Fastener / Part Bought</th>
+                                                <th class="text-right" style="font-size: 12.5px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px; width: 100px;">Cost</th>
+                                                <th class="text-right" style="font-size: 12.5px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px; width: 60px;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="proj-detail-budget-tbody">
+                                            <!-- Dynamically filled -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Status Log Timeline diaries -->
+                        <div class="glass-panel" style="padding: 24px;">
+                            <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">Daily Status Timeline Diary</h3>
+                            
+                            <!-- Add timeline note inline row -->
+                            <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+                                <input type="text" id="proj-detail-log-input" placeholder="Type today's build update..." style="flex: 1; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
+                                <button type="button" class="primary-btn" id="btn-detail-add-log" style="padding: 8px 14px; font-size: 12.5px; box-shadow: none;">Add Log</button>
+                            </div>
+
+                            <div id="proj-detail-logs-timeline-container" style="max-height: 800px; overflow-y: auto;">
+                                <!-- Timelines trail dynamically drawn -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom pinboard section for visual stickies -->
+                    <div class="glass-panel" style="padding: 28px; margin-top: 16px; background-color: rgba(19, 27, 46, 0.4); border-color: rgba(255, 255, 255, 0.04);">
+                        <h3 style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Lessons & Next Plans Pinboard</h3>
+                        <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 20px;">Interactive workshop corkboard. Click a sticky note below to read or edit its contents immediately.</p>
+                        
+                        <div class="project-pinboard" id="project-detail-pinboard">
+                            <!-- Visual sticky notes pinned here -->
+                        </div>
+                    </div>
+                </section>
+
                 <!-- 5. GOOGLE SHEETS SYNC VIEW -->
                 <section id="view-sync" class="app-view">
                     <div class="view-header">
@@ -796,7 +926,15 @@
                 <div class="form-group">
                     <label for="proj-imageUrls">Project Image URLs (Comma-separated)</label>
                     <input type="text" id="proj-imageUrls" placeholder="e.g., https://site.com/image.jpg">
-                    <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">You can paste one or multiple public web image links.</span>
+                    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="proj-image-file" accept="image/*" multiple style="display: none;">
+                        <button type="button" class="secondary-btn" id="btn-upload-proj-image" style="padding: 6px 12px; font-size: 12px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            Attach Local Images
+                        </button>
+                        <span id="proj-image-upload-status" style="font-size: 11px; color: var(--text-muted);">No files attached</span>
+                    </div>
+                    <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">You can paste web URLs or attach local images directly from your disk.</span>
                 </div>
 
                 <div class="form-group">
@@ -850,6 +988,34 @@
                 <div class="modal-footer" style="margin-top: 24px; padding-top: 16px;">
                     <button type="button" class="secondary-btn" id="btn-cancel-project">Cancel</button>
                     <button type="submit" class="primary-btn" id="btn-save-project">Save Project</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- LARGE FORMAT STICKY NOTE NOTEPAD EDITOR DIALOG MODAL [NEW] -->
+    <dialog class="custom-modal" id="modal-sticky-note" style="max-width: 580px;">
+        <div class="modal-content glass-panel notepad-sheet" style="border: 2px solid var(--note-border-color, var(--primary)) !important; overflow: hidden; padding: 0;">
+            <div class="modal-header" style="background-color: var(--note-header-bg, var(--bg-surface-elevated)); padding: 20px 24px; border-bottom: 1.5px solid var(--note-border-color, var(--border-color));">
+                <div>
+                    <h2 id="modal-sticky-note-title" style="font-family: var(--font-heading); font-size: 18px; font-weight: 800; color: var(--note-text-color, var(--text-primary)); margin: 0;">Sticky Note</h2>
+                    <span id="modal-sticky-note-project" style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-top: 2px;">Project name</span>
+                </div>
+                <button class="modal-close" id="btn-close-sticky-note-modal" style="color: var(--note-text-color, var(--text-secondary));">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <form id="form-sticky-note" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; background-color: var(--note-body-bg, var(--bg-surface));">
+                <input type="hidden" id="sticky-note-project-id">
+                <input type="hidden" id="sticky-note-field-type">
+                
+                <div class="form-group" style="margin: 0; background: transparent;">
+                    <textarea id="sticky-note-textarea" rows="10" placeholder="Type your notebook entry here..." style="width: 100%; padding: 20px; font-size: 15px; line-height: 1.6; border: none; outline: none; resize: none; background: transparent; font-family: var(--font-body); color: var(--note-textarea-color, var(--text-primary));" required></textarea>
+                </div>
+                
+                <div class="modal-footer" style="padding-top: 16px; border-top: 1.5px solid var(--note-border-color, var(--border-color)); display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" class="secondary-btn" id="btn-cancel-sticky-note" style="border-color: var(--note-border-color, var(--border-color)); color: var(--note-text-color, var(--text-primary)); background: transparent;">Close</button>
+                    <button type="submit" class="primary-btn" id="btn-save-sticky-note" style="background-color: var(--note-save-bg, var(--primary)); border: none; box-shadow: none;">Save Note</button>
                 </div>
             </form>
         </div>

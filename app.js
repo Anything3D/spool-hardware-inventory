@@ -2070,6 +2070,76 @@ function setupLoginHandlers() {
 // Temporary arrays to hold list items inside the Project Creation Modal
 let modalProjectTasks = [];
 let modalProjectBudget = [];
+let activeProjectId = null;
+let editTaskIndex = null;
+let editBudgetIndex = null;
+let detailEditTaskIndex = null;
+let detailEditBudgetIndex = null;
+
+// Multi-file drag and drop / click image compression scaling engine
+function processMultipleFiles(files, targetInputId, statusSpanId, appendToExisting = false, callback = null) {
+    const statusSpan = statusSpanId ? document.getElementById(statusSpanId) : null;
+    if (statusSpan) {
+        statusSpan.innerText = `Compressing ${files.length} images...`;
+        statusSpan.style.color = 'var(--warning)';
+    }
+    
+    let filesProcessed = 0;
+    const compressedUrls = [];
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const maxDim = 800;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                compressedUrls.push(compressedDataUrl);
+                filesProcessed++;
+                
+                if (filesProcessed === files.length) {
+                    if (targetInputId) {
+                        const inputEl = document.getElementById(targetInputId);
+                        if (inputEl) {
+                            const newBatch = compressedUrls.join(', ');
+                            if (appendToExisting && inputEl.value.trim()) {
+                                inputEl.value = inputEl.value.trim() + ', ' + newBatch;
+                            } else {
+                                inputEl.value = newBatch;
+                            }
+                            const event = new Event('input', { bubbles: true });
+                            inputEl.dispatchEvent(event);
+                        }
+                    }
+                    if (statusSpan) {
+                        statusSpan.innerText = `${files.length} images compressed & attached!`;
+                        statusSpan.style.color = 'var(--success)';
+                    }
+                    if (callback) callback(compressedUrls);
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
 
 function setupProjectHandlers() {
     const btnAddProject = document.getElementById('btn-add-project');
@@ -2225,23 +2295,83 @@ function renderModalTasks() {
     
     modalProjectTasks.forEach((t, idx) => {
         const li = document.createElement('li');
-        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px;';
-        li.innerHTML = `
-            <span>${t.text}</span>
-            <button type="button" class="icon-only-btn delete-icon delete-modal-task" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove task">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        `;
+        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px; gap:8px;';
+        
+        if (editTaskIndex === idx) {
+            li.innerHTML = `
+                <input type="text" id="inline-task-edit-input" value="${t.text}" style="flex:1; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--primary); border-radius:4px; outline:none; color:var(--text-primary);">
+                <div style="display:flex; gap:4px;">
+                    <button type="button" class="icon-only-btn save-inline-task" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                    <button type="button" class="icon-only-btn cancel-inline-task" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            `;
+        } else {
+            li.innerHTML = `
+                <span style="flex:1;">${t.text}</span>
+                <div style="display:flex; gap:4px; align-items:center;">
+                    <button type="button" class="icon-only-btn edit-modal-task" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit task">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                    <button type="button" class="icon-only-btn delete-icon delete-modal-task" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove task">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            `;
+        }
         list.appendChild(li);
     });
 
-    document.querySelectorAll('.delete-modal-task').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const idx = parseInt(e.currentTarget.getAttribute('data-index'));
-            modalProjectTasks.splice(idx, 1);
-            renderModalTasks();
+    if (editTaskIndex !== null) {
+        const saveBtn = list.querySelector('.save-inline-task');
+        const cancelBtn = list.querySelector('.cancel-inline-task');
+        const input = list.querySelector('#inline-task-edit-input');
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                const newVal = input.value.trim();
+                if (newVal) {
+                    modalProjectTasks[editTaskIndex].text = newVal;
+                }
+                editTaskIndex = null;
+                renderModalTasks();
+            });
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                editTaskIndex = null;
+                renderModalTasks();
+            });
+        }
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveBtn.click();
+                } else if (e.key === 'Escape') {
+                    cancelBtn.click();
+                }
+            });
+            input.focus();
+        }
+    } else {
+        list.querySelectorAll('.edit-modal-task').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                editTaskIndex = parseInt(e.currentTarget.getAttribute('data-index'));
+                renderModalTasks();
+            });
         });
-    });
+        list.querySelectorAll('.delete-modal-task').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                modalProjectTasks.splice(idx, 1);
+                renderModalTasks();
+            });
+        });
+    }
 }
 
 function renderModalBudget() {
@@ -2251,26 +2381,98 @@ function renderModalBudget() {
     
     modalProjectBudget.forEach((b, idx) => {
         const li = document.createElement('li');
-        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px;';
-        li.innerHTML = `
-            <span style="font-weight:600;">${b.item}</span>
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span style="color:var(--secondary); font-weight:700;">$${b.cost.toFixed(2)}</span>
-                <button type="button" class="icon-only-btn delete-icon delete-modal-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-        `;
+        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px; gap:8px;';
+        
+        if (editBudgetIndex === idx) {
+            li.innerHTML = `
+                <div style="display:flex; flex:1; gap:8px;">
+                    <input type="text" id="inline-budget-edit-item" value="${b.item}" style="flex:2; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary);">
+                    <input type="number" min="0" step="0.01" id="inline-budget-edit-cost" value="${b.cost}" style="flex:1; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary); max-width:80px;">
+                </div>
+                <div style="display:flex; gap:4px;">
+                    <button type="button" class="icon-only-btn save-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                    <button type="button" class="icon-only-btn cancel-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            `;
+        } else {
+            li.innerHTML = `
+                <span style="font-weight:600; flex:1;">${b.item}</span>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="color:var(--secondary); font-weight:700;">$${b.cost.toFixed(2)}</span>
+                    <button type="button" class="icon-only-btn edit-modal-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit part">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                    <button type="button" class="icon-only-btn delete-icon delete-modal-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            `;
+        }
         list.appendChild(li);
     });
 
-    document.querySelectorAll('.delete-modal-budget').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const idx = parseInt(e.currentTarget.getAttribute('data-index'));
-            modalProjectBudget.splice(idx, 1);
-            renderModalBudget();
+    if (editBudgetIndex !== null) {
+        const saveBtn = list.querySelector('.save-inline-budget');
+        const cancelBtn = list.querySelector('.cancel-inline-budget');
+        const itemInput = list.querySelector('#inline-budget-edit-item');
+        const costInput = list.querySelector('#inline-budget-edit-cost');
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                const newItemVal = itemInput.value.trim();
+                const newCostVal = parseFloat(costInput.value);
+                if (newItemVal && !isNaN(newCostVal) && newCostVal >= 0) {
+                    modalProjectBudget[editBudgetIndex].item = newItemVal;
+                    modalProjectBudget[editBudgetIndex].cost = newCostVal;
+                }
+                editBudgetIndex = null;
+                renderModalBudget();
+            });
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                editBudgetIndex = null;
+                renderModalBudget();
+            });
+        }
+        if (itemInput) {
+            itemInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveBtn.click();
+                } else if (e.key === 'Escape') {
+                    cancelBtn.click();
+                }
+            });
+            costInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveBtn.click();
+                } else if (e.key === 'Escape') {
+                    cancelBtn.click();
+                }
+            });
+            itemInput.focus();
+        }
+    } else {
+        list.querySelectorAll('.edit-modal-budget').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                editBudgetIndex = parseInt(e.currentTarget.getAttribute('data-index'));
+                renderModalBudget();
+            });
         });
-    });
+        list.querySelectorAll('.delete-modal-budget').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                modalProjectBudget.splice(idx, 1);
+                renderModalBudget();
+            });
+        });
+    }
 }
 
 // Save Project Form Action
@@ -2757,6 +2959,16 @@ function renderProjects() {
             ${closureRemarksMarkup}
         `;
 
+        card.addEventListener('click', (e) => {
+            // Ignore clicking on action buttons, checkboxes, inputs, drawers or carousel buttons
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea') || e.target.closest('.project-carousel-dot') || e.target.closest('.project-drawer') || e.target.closest('.project-card-actions')) {
+                return;
+            }
+            activeProjectId = p.projectId;
+            switchTab('project-details');
+            renderProjectDetails(p.projectId);
+        });
+
         container.appendChild(card);
     });
 
@@ -3014,6 +3226,606 @@ function jumpToCarouselSlide(projId, slideIndex) {
             } else {
                 dot.classList.remove('active');
             }
+        });
+    }
+}
+
+// 5. Workbench Details View Event Listeners & Sticky Note modal notepad handlers
+const oldSetupProjectHandlers = setupProjectHandlers;
+setupProjectHandlers = function() {
+    oldSetupProjectHandlers();
+    
+    const btnProjectDetailBack = document.getElementById('btn-project-detail-back');
+    if (btnProjectDetailBack) {
+        btnProjectDetailBack.addEventListener('click', () => {
+            activeProjectId = null;
+            switchTab('projects');
+        });
+    }
+
+    // Attach visual images in details workbench
+    const btnUploadProjImageDetails = document.getElementById('btn-upload-proj-image-details');
+    const projImageFileDetails = document.getElementById('proj-image-file-details');
+    if (btnUploadProjImageDetails && projImageFileDetails) {
+        btnUploadProjImageDetails.addEventListener('click', () => projImageFileDetails.click());
+        projImageFileDetails.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0 && activeProjectId) {
+                processMultipleFiles(e.target.files, null, null, false, (urls) => {
+                    const proj = projects.find(p => p.projectId === activeProjectId);
+                    if (proj) {
+                        const existing = (proj.imageUrls || '').split(',').map(u => u.trim()).filter(Boolean);
+                        const updated = existing.concat(urls).join(', ');
+                        proj.imageUrls = updated;
+                        logActivity(`Added ${urls.length} photo(s) to "${proj.projectName}" visual gallery`, 'success');
+                        renderAll();
+                        renderProjectDetails(activeProjectId);
+                    }
+                });
+            }
+        });
+    }
+
+    // Detail add task
+    const btnDetailAddTask = document.getElementById('btn-detail-add-task');
+    if (btnDetailAddTask) {
+        btnDetailAddTask.addEventListener('click', () => {
+            const input = document.getElementById('proj-detail-task-input');
+            const val = input.value.trim();
+            if (!val || !activeProjectId) return;
+            const proj = projects.find(p => p.projectId === activeProjectId);
+            if (proj) {
+                if (!proj.tasks) proj.tasks = [];
+                proj.tasks.push({
+                    id: 't-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                    text: val,
+                    completed: false
+                });
+                input.value = '';
+                logActivity(`Checklist update: Added task "${val}" directly on workbench`, 'success');
+                renderAll();
+                renderProjectDetails(activeProjectId);
+            }
+        });
+    }
+
+    // Detail add budget part
+    const btnDetailAddBudget = document.getElementById('btn-detail-add-budget');
+    if (btnDetailAddBudget) {
+        btnDetailAddBudget.addEventListener('click', () => {
+            const itemInput = document.getElementById('proj-detail-budget-item');
+            const costInput = document.getElementById('proj-detail-budget-cost');
+            const itemVal = itemInput.value.trim();
+            const costVal = parseFloat(costInput.value);
+            if (!itemVal || isNaN(costVal) || costVal < 0 || !activeProjectId) return;
+            const proj = projects.find(p => p.projectId === activeProjectId);
+            if (proj) {
+                if (!proj.budget) proj.budget = [];
+                proj.budget.push({
+                    id: 'b-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                    item: itemVal,
+                    cost: costVal
+                });
+                itemInput.value = '';
+                costInput.value = '';
+                logActivity(`Cost update: Logged part "${itemVal}" ($${costVal.toFixed(2)}) directly on workbench`, 'success');
+                renderAll();
+                renderProjectDetails(activeProjectId);
+            }
+        });
+    }
+
+    // Detail add diary log
+    const btnDetailAddLog = document.getElementById('btn-detail-add-log');
+    if (btnDetailAddLog) {
+        btnDetailAddLog.addEventListener('click', () => {
+            const input = document.getElementById('proj-detail-log-input');
+            const val = input.value.trim();
+            if (!val || !activeProjectId) return;
+            const proj = projects.find(p => p.projectId === activeProjectId);
+            if (proj) {
+                if (!proj.statusLog) proj.statusLog = [];
+                proj.statusLog.push({
+                    date: new Date().toISOString().split('T')[0],
+                    note: val
+                });
+                input.value = '';
+                logActivity(`Progress update: Logged timeline status diary entry directly on workbench`, 'success');
+                renderAll();
+                renderProjectDetails(activeProjectId);
+            }
+        });
+    }
+
+    // Form sticky note submit editor dialog save
+    const formStickyNote = document.getElementById('form-sticky-note');
+    if (formStickyNote) {
+        formStickyNote.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const pId = document.getElementById('sticky-note-project-id').value;
+            const fieldType = document.getElementById('sticky-note-field-type').value;
+            const textVal = document.getElementById('sticky-note-textarea').value.trim();
+            
+            const proj = projects.find(p => p.projectId === pId);
+            if (proj && fieldType) {
+                proj[fieldType] = textVal;
+                
+                // Automatically append a log entry for this action
+                if (!proj.statusLog) proj.statusLog = [];
+                const fieldLabel = fieldType === 'lessonsLearned' ? 'Lessons Learned' : 'Next Steps / Future Plans';
+                proj.statusLog.push({
+                    date: new Date().toISOString().split('T')[0],
+                    note: `Updated ${fieldLabel} sticky note`
+                });
+                
+                logActivity(`Sticky Note update: Revised ${fieldLabel} for "${proj.projectName}"`, 'success');
+                renderAll();
+                if (activeProjectId === pId) {
+                    renderProjectDetails(pId);
+                }
+            }
+            
+            const modalStickyNote = document.getElementById('modal-sticky-note');
+            if (modalStickyNote) modalStickyNote.close();
+        });
+    }
+
+    const btnCloseStickyNoteModal = document.getElementById('btn-close-sticky-note-modal');
+    if (btnCloseStickyNoteModal) {
+        btnCloseStickyNoteModal.addEventListener('click', () => {
+            const modalStickyNote = document.getElementById('modal-sticky-note');
+            if (modalStickyNote) modalStickyNote.close();
+        });
+    }
+
+    const btnCancelStickyNote = document.getElementById('btn-cancel-sticky-note');
+    if (btnCancelStickyNote) {
+        btnCancelStickyNote.addEventListener('click', () => {
+            const modalStickyNote = document.getElementById('modal-sticky-note');
+            if (modalStickyNote) modalStickyNote.close();
+        });
+    }
+
+    // Modal creation local images attachment
+    const btnUploadProjImage = document.getElementById('btn-upload-proj-image');
+    const projImageFile = document.getElementById('proj-image-file');
+    if (btnUploadProjImage && projImageFile) {
+        btnUploadProjImage.addEventListener('click', () => projImageFile.click());
+        projImageFile.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                processMultipleFiles(e.target.files, 'proj-imageUrls', 'proj-image-upload-status', true);
+            }
+        });
+    }
+};
+
+function openStickyNoteEditor(projectId, fieldType) {
+    const proj = projects.find(p => p.projectId === projectId);
+    if (!proj) return;
+    
+    const modalStickyNote = document.getElementById('modal-sticky-note');
+    const titleEl = document.getElementById('modal-sticky-note-title');
+    const projEl = document.getElementById('modal-sticky-note-project');
+    const textareaEl = document.getElementById('sticky-note-textarea');
+    
+    document.getElementById('sticky-note-project-id').value = projectId;
+    document.getElementById('sticky-note-field-type').value = fieldType;
+    
+    if (titleEl) {
+        titleEl.innerText = fieldType === 'lessonsLearned' ? 'Lessons Learned (Future Reference)' : 'Next Steps & Future Plans';
+    }
+    if (projEl) {
+        projEl.innerText = proj.projectName;
+    }
+    if (textareaEl) {
+        textareaEl.value = proj[fieldType] || '';
+    }
+    
+    if (modalStickyNote) {
+        if (fieldType === 'lessonsLearned') {
+            modalStickyNote.setAttribute('data-note-style', 'yellow');
+        } else {
+            modalStickyNote.setAttribute('data-note-style', 'teal');
+        }
+        modalStickyNote.showModal();
+    }
+}
+
+function renderProjectDetails(projectId) {
+    const p = projects.find(proj => proj.projectId === projectId);
+    if (!p) return;
+
+    const nameEl = document.getElementById('proj-detail-name');
+    const descEl = document.getElementById('proj-detail-desc');
+    const statusPill = document.getElementById('proj-detail-status-pill');
+    const statusText = document.getElementById('proj-detail-status');
+    const durationEl = document.getElementById('proj-detail-duration');
+
+    if (nameEl) nameEl.innerText = p.projectName;
+    if (descEl) descEl.innerText = p.description || 'No description provided';
+    if (statusText) statusText.innerText = p.status;
+
+    if (statusPill) {
+        statusPill.className = 'status-pill';
+        if (p.status === 'Planning') statusPill.classList.add('low');
+        else if (p.status === 'In Progress') statusPill.classList.add('good');
+        else if (p.status === 'On Hold') statusPill.classList.add('low');
+        else if (p.status === 'Completed') statusPill.classList.add('good');
+        else if (p.status === 'Cancelled') statusPill.classList.add('out');
+    }
+
+    if (durationEl && p.startDate) {
+        const startMs = Date.parse(p.startDate);
+        if (!isNaN(startMs)) {
+            if (p.status === 'Completed' || p.status === 'Cancelled') {
+                const endMs = p.endDate ? Date.parse(p.endDate) : Date.now();
+                const durationDays = Math.max(Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)), 1);
+                durationEl.innerText = `Duration: ${durationDays} ${durationDays === 1 ? 'day' : 'days'}`;
+            } else {
+                const openDays = Math.max(Math.floor((Date.now() - startMs) / (1000 * 60 * 60 * 24)), 0);
+                durationEl.innerText = `Active: ${openDays} ${openDays === 1 ? 'day' : 'days'} open`;
+            }
+        }
+    }
+
+    const carouselTarget = document.getElementById('proj-detail-carousel-target');
+    if (carouselTarget) {
+        const imagesList = (p.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
+        if (imagesList.length > 0) {
+            if (projectCarouselIndices[projectId] === undefined) {
+                projectCarouselIndices[projectId] = 0;
+            }
+            let activeIdx = projectCarouselIndices[projectId];
+            if (activeIdx >= imagesList.length) {
+                activeIdx = 0;
+                projectCarouselIndices[projectId] = 0;
+            }
+
+            let controlsMarkup = '';
+            if (imagesList.length > 1) {
+                controlsMarkup = `
+                    <button type="button" class="project-carousel-btn prev detail-carousel-nav" data-dir="-1">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <button type="button" class="project-carousel-btn next detail-carousel-nav" data-dir="1">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                `;
+            }
+
+            let dotsMarkup = '';
+            if (imagesList.length > 1) {
+                dotsMarkup = `<div class="project-carousel-dots">` + 
+                    imagesList.map((_, i) => `<span class="project-carousel-dot detail-carousel-dot ${i === activeIdx ? 'active' : ''}" data-slide="${i}"></span>`).join('') +
+                    `</div>`;
+            }
+
+            carouselTarget.innerHTML = `
+                <div class="project-carousel-wrapper" style="height: 320px; border-radius: 8px; overflow: hidden; position: relative;">
+                    ${controlsMarkup}
+                    <div class="project-carousel-track" style="transform: translateX(-${activeIdx * 100}%); display: flex; height: 100%; transition: transform 0.4s ease;">
+                        ${imagesList.map(url => `
+                            <div class="project-carousel-slide" style="flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: var(--bg-surface-elevated);">
+                                <img src="${url}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%232e2942%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2394a3b8%22 font-family=%22Plus Jakarta Sans%22 font-size=%2212%22>Failed to load image</text></svg>';" alt="Build photo">
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${dotsMarkup}
+                </div>
+            `;
+
+            carouselTarget.querySelectorAll('.detail-carousel-nav').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const direction = parseInt(btn.getAttribute('data-dir'));
+                    let newIdx = (projectCarouselIndices[projectId] + direction + imagesList.length) % imagesList.length;
+                    projectCarouselIndices[projectId] = newIdx;
+                    renderProjectDetails(projectId);
+                });
+            });
+
+            carouselTarget.querySelectorAll('.detail-carousel-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    projectCarouselIndices[projectId] = parseInt(dot.getAttribute('data-slide'));
+                    renderProjectDetails(projectId);
+                });
+            });
+        } else {
+            carouselTarget.innerHTML = `
+                <div class="project-no-image" style="height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border: 1.5px dashed var(--border-color); border-radius: 8px; color: var(--text-muted);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 32px; height: 32px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    <span style="font-size: 13px;">No build photos attached. Upload files below.</span>
+                </div>
+            `;
+        }
+    }
+
+    const tasksContainer = document.getElementById('proj-detail-tasks-list-container');
+    if (tasksContainer) {
+        tasksContainer.innerHTML = '';
+        const taskList = p.tasks || [];
+        const total = taskList.length;
+        const completed = taskList.filter(t => t.completed).length;
+        const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        const progressPercentEl = document.getElementById('proj-detail-progress-percent');
+        const progressInnerEl = document.getElementById('proj-detail-progress-inner');
+        if (progressPercentEl) progressPercentEl.innerText = `${progressPercent}% Completed`;
+        if (progressInnerEl) progressInnerEl.style.width = `${progressPercent}%`;
+
+        if (taskList.length === 0) {
+            tasksContainer.innerHTML = `<li style="font-size:12.5px; color:var(--text-muted); font-style:italic; padding: 10px 0;">No tasks currently in checklist.</li>`;
+        } else {
+            taskList.forEach((t, idx) => {
+                const li = document.createElement('li');
+                li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:13px; gap:8px;';
+                
+                if (detailEditTaskIndex === idx) {
+                    li.innerHTML = `
+                        <input type="text" id="detail-inline-task-edit-input" value="${t.text}" style="flex:1; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--primary); border-radius:4px; outline:none; color:var(--text-primary);">
+                        <div style="display:flex; gap:4px;">
+                            <button type="button" class="icon-only-btn save-detail-inline-task" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </button>
+                            <button type="button" class="icon-only-btn cancel-detail-inline-task" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    li.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:10px; flex:1; cursor:pointer;" class="detail-task-item-click">
+                            <input type="checkbox" ${t.completed ? 'checked' : ''} class="detail-task-checkbox" style="cursor:pointer;">
+                            <span class="detail-task-text ${t.completed ? 'completed' : ''}" style="color: var(--text-primary); font-size: 13.5px; font-weight: 500;">${t.text}</span>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button type="button" class="icon-only-btn edit-detail-task" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit task title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button type="button" class="icon-only-btn delete-icon delete-detail-task" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Delete task">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    `;
+                }
+                tasksContainer.appendChild(li);
+            });
+
+            if (detailEditTaskIndex !== null) {
+                const saveBtn = tasksContainer.querySelector('.save-detail-inline-task');
+                const cancelBtn = tasksContainer.querySelector('.cancel-detail-inline-task');
+                const input = tasksContainer.querySelector('#detail-inline-task-edit-input');
+                
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', () => {
+                        const newVal = input.value.trim();
+                        if (newVal) {
+                            p.tasks[detailEditTaskIndex].text = newVal;
+                            logActivity(`Checklist update: Edited task description`, 'info');
+                            renderAll();
+                        }
+                        detailEditTaskIndex = null;
+                        renderProjectDetails(projectId);
+                    });
+                }
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', () => {
+                        detailEditTaskIndex = null;
+                        renderProjectDetails(projectId);
+                    });
+                }
+                if (input) {
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            saveBtn.click();
+                        } else if (e.key === 'Escape') {
+                            cancelBtn.click();
+                        }
+                    });
+                    input.focus();
+                }
+            } else {
+                tasksContainer.querySelectorAll('.detail-task-item-click').forEach((item, idx) => {
+                    item.addEventListener('click', (e) => {
+                        if (e.target.type === 'checkbox') return;
+                        const box = item.querySelector('.detail-task-checkbox');
+                        box.checked = !box.checked;
+                        p.tasks[idx].completed = box.checked;
+                        logActivity(`Checklist update: Marked task "${p.tasks[idx].text}" ${box.checked ? 'completed' : 'active'}`, 'info');
+                        renderAll();
+                        renderProjectDetails(projectId);
+                    });
+                });
+                tasksContainer.querySelectorAll('.detail-task-checkbox').forEach((checkbox, idx) => {
+                    checkbox.addEventListener('change', (e) => {
+                        p.tasks[idx].completed = e.target.checked;
+                        logActivity(`Checklist update: Marked task "${p.tasks[idx].text}" ${e.target.checked ? 'completed' : 'active'}`, 'info');
+                        renderAll();
+                        renderProjectDetails(projectId);
+                    });
+                });
+                tasksContainer.querySelectorAll('.edit-detail-task').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        detailEditTaskIndex = parseInt(e.currentTarget.getAttribute('data-index'));
+                        renderProjectDetails(projectId);
+                    });
+                });
+                tasksContainer.querySelectorAll('.delete-detail-task').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                        const deletedText = p.tasks[idx].text;
+                        p.tasks.splice(idx, 1);
+                        logActivity(`Checklist update: Deleted task "${deletedText}"`, 'warning');
+                        renderAll();
+                        renderProjectDetails(projectId);
+                    });
+                });
+            }
+        }
+    }
+
+    const budgetTbody = document.getElementById('proj-detail-budget-tbody');
+    if (budgetTbody) {
+        budgetTbody.innerHTML = '';
+        const budgetList = p.budget || [];
+        const totalSpend = budgetList.reduce((sum, b) => sum + (parseFloat(b.cost) || 0), 0);
+        
+        const spendBadge = document.getElementById('proj-detail-spend-badge');
+        if (spendBadge) spendBadge.innerText = `$${totalSpend.toFixed(2)}`;
+
+        if (budgetList.length === 0) {
+            budgetTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted); font-style:italic;">No custom project parts bought yet.</td></tr>`;
+        } else {
+            budgetList.forEach((b, idx) => {
+                const tr = document.createElement('tr');
+                if (detailEditBudgetIndex === idx) {
+                    tr.innerHTML = `
+                        <td style="padding: 8px 4px;">
+                            <input type="text" id="detail-inline-budget-edit-item" value="${b.item}" style="width:100%; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary);">
+                        </td>
+                        <td style="padding: 8px 4px; text-align:right;">
+                            <input type="number" min="0" step="0.01" id="detail-inline-budget-edit-cost" value="${b.cost}" style="width:70px; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary); text-align:right;">
+                        </td>
+                        <td style="padding: 8px 4px; text-align:right;">
+                            <div style="display:flex; gap:4px; justify-content:flex-end;">
+                                <button type="button" class="icon-only-btn save-detail-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </button>
+                                <button type="button" class="icon-only-btn cancel-detail-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td style="padding: 10px 4px; font-weight: 600; color: var(--text-primary); font-size: 13px;">${b.item}</td>
+                        <td class="text-right" style="padding: 10px 4px; font-weight: 700; color: var(--secondary); font-size: 13.5px;">$${b.cost.toFixed(2)}</td>
+                        <td class="text-right" style="padding: 10px 4px;">
+                            <div style="display:flex; gap:4px; justify-content:flex-end; align-items:center;">
+                                <button type="button" class="icon-only-btn edit-detail-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit part details">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                <button type="button" class="icon-only-btn delete-icon delete-detail-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Delete purchase">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                }
+                budgetTbody.appendChild(tr);
+            });
+
+            if (detailEditBudgetIndex !== null) {
+                const saveBtn = budgetTbody.querySelector('.save-detail-inline-budget');
+                const cancelBtn = budgetTbody.querySelector('.cancel-detail-inline-budget');
+                const itemInput = budgetTbody.querySelector('#detail-inline-budget-edit-item');
+                const costInput = budgetTbody.querySelector('#detail-inline-budget-edit-cost');
+                
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', () => {
+                        const newItemVal = itemInput.value.trim();
+                        const newCostVal = parseFloat(costInput.value);
+                        if (newItemVal && !isNaN(newCostVal) && newCostVal >= 0) {
+                            p.budget[detailEditBudgetIndex].item = newItemVal;
+                            p.budget[detailEditBudgetIndex].cost = newCostVal;
+                            logActivity(`Cost update: Edited purchased part details`, 'info');
+                            renderAll();
+                        }
+                        detailEditBudgetIndex = null;
+                        renderProjectDetails(projectId);
+                    });
+                }
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', () => {
+                        detailEditBudgetIndex = null;
+                        renderProjectDetails(projectId);
+                    });
+                }
+                if (itemInput) {
+                    itemInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            saveBtn.click();
+                        } else if (e.key === 'Escape') {
+                            cancelBtn.click();
+                        }
+                    });
+                    costInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            saveBtn.click();
+                        } else if (e.key === 'Escape') {
+                            cancelBtn.click();
+                        }
+                    });
+                    itemInput.focus();
+                }
+            } else {
+                budgetTbody.querySelectorAll('.edit-detail-budget').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        detailEditBudgetIndex = parseInt(e.currentTarget.getAttribute('data-index'));
+                        renderProjectDetails(projectId);
+                    });
+                });
+                budgetTbody.querySelectorAll('.delete-detail-budget').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+                        const deletedItem = p.budget[idx].item;
+                        const deletedCost = p.budget[idx].cost;
+                        p.budget.splice(idx, 1);
+                        logActivity(`Cost update: Deleted part "${deletedItem}" ($${deletedCost.toFixed(2)})`, 'warning');
+                        renderAll();
+                        renderProjectDetails(projectId);
+                    });
+                });
+            }
+        }
+    }
+
+    const timelineContainer = document.getElementById('proj-detail-logs-timeline-container');
+    if (timelineContainer) {
+        timelineContainer.innerHTML = '';
+        const logsList = p.statusLog || [];
+        if (logsList.length === 0) {
+            timelineContainer.innerHTML = `<p style="font-size:12.5px; color:var(--text-muted); font-style:italic; padding: 10px 0;">No chronological status diary logs recorded yet.</p>`;
+        } else {
+            const sortedLogs = [...logsList].reverse();
+            sortedLogs.forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'project-card-timeline-item';
+                item.style.cssText = 'position:relative; padding-left:24px; margin-bottom:16px;';
+                item.innerHTML = `
+                    <div class="project-card-timeline-bullet" style="position:absolute; left:0; top:4px; width:10px; height:10px; border-radius:50%; background-color:var(--primary); border:2px solid var(--bg-surface);"></div>
+                    <div class="project-card-timeline-date" style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">${log.date}</div>
+                    <div class="project-card-timeline-note" style="font-size:13px; color:var(--text-secondary); margin-top:4px; line-height:1.4; white-space:pre-wrap;">${log.note}</div>
+                `;
+                timelineContainer.appendChild(item);
+            });
+        }
+    }
+
+    const pinboard = document.getElementById('project-detail-pinboard');
+    if (pinboard) {
+        pinboard.innerHTML = `
+            <div class="sticky-note lessons-learned-note" id="sticky-lessons-learned" style="cursor: pointer;">
+                <div class="sticky-note-tape"></div>
+                <div class="sticky-note-pin"></div>
+                <div class="sticky-note-header">Lessons Learned</div>
+                <div class="sticky-note-body">${p.lessonsLearned ? p.lessonsLearned.replace(/\n/g, '<br>') : '<em>No lessons learned logged yet. Click here to add tips or warnings for your future projects!</em>'}</div>
+            </div>
+            <div class="sticky-note future-plans-note" id="sticky-future-plans" style="cursor: pointer;">
+                <div class="sticky-note-tape"></div>
+                <div class="sticky-note-pin"></div>
+                <div class="sticky-note-header">Next Steps / Plans</div>
+                <div class="sticky-note-body">${p.futurePlans ? p.futurePlans.replace(/\n/g, '<br>') : '<em>No future plans logged yet. Click here to map out upgrades or next steps!</em>'}</div>
+            </div>
+        `;
+        
+        document.getElementById('sticky-lessons-learned').addEventListener('click', () => {
+            openStickyNoteEditor(projectId, 'lessonsLearned');
+        });
+        document.getElementById('sticky-future-plans').addEventListener('click', () => {
+            openStickyNoteEditor(projectId, 'futurePlans');
         });
     }
 }
