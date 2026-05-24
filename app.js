@@ -5,12 +5,14 @@
 // Global Application State
 let spools = [];
 let hardware = [];
+let projects = [];
 let activeTab = 'dashboard';
 let searchQuery = '';
 let theme = 'dark';
 let suppressAutoSync = false;
 let autoSyncTimer = null;
 let hasFetchedFromCloud = false;
+let projectCarouselIndices = {}; // Track image carousel indexes per project card
 
 // Modular Cabinet Map Configuration
 const CABINET_SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -35,8 +37,10 @@ const cloudStatusIcon = document.getElementById('cloud-sync-status-icon');
 // Modals & Forms
 const modalSpool = document.getElementById('modal-spool');
 const modalHardware = document.getElementById('modal-hardware');
+const modalProject = document.getElementById('modal-project');
 const formSpool = document.getElementById('form-spool');
 const formHardware = document.getElementById('form-hardware');
+const formProject = document.getElementById('form-project');
 
 // Modal Toggles & Controls
 const btnAddSpool = document.getElementById('btn-add-spool');
@@ -104,6 +108,39 @@ const MOCK_HARDWARE = [
     { id: 'hw-13', boxNo: 'A20', category: 'SHCS', specification: 'M6', sizeLD: '40', sizeW: '', sizeT: '', qty: '6', minQty: 10, remarks: 'Alloy steel' }
 ];
 
+const MOCK_PROJECTS = [
+    {
+        projectId: 'proj-1',
+        projectName: 'Voron 2.4 3D Printer Build',
+        description: 'Building a custom high-speed Voron 2.4 CoreXY 3D printer with 350mm gantry volume.',
+        status: 'In Progress',
+        startDate: '2026-05-18',
+        endDate: '',
+        successReason: '',
+        lessonsLearned: 'Proper frame squaring is critical for high print speeds. Standard alignment corner squares save hours.',
+        futurePlans: 'Install active carbon exhaust air filter and build a Klicky mechanical probe.',
+        tasks: [
+            { id: "t-1", text: "Assemble aluminum extrusion frame and square gantry", completed: true },
+            { id: "t-2", text: "Wire stepper motors, toolhead cables, and power supply", completed: true },
+            { id: "t-3", text: "Install Klipper firmware and tune config parameters", completed: false },
+            { id: "t-4", text: "Execute first test print and perform input shaper calibration", completed: false }
+        ],
+        budget: [
+            { id: "b-1", item: "LDO Motor & Frame Kit", cost: 350.00 },
+            { id: "b-2", item: "BIGTREETECH Octopus V1.1 MCU", cost: 65.50 },
+            { id: "b-3", item: "Raspberry Pi 4B (4GB)", cost: 45.00 },
+            { id: "b-4", item: "High-temperature Toolhead Wiring", cost: 18.20 }
+        ],
+        statusLog: [
+            { date: "2026-05-18", note: "Extrusion frame kits unboxed. Spent 4 hours squaring and tightening bolts. Gantry slides perfectly!" },
+            { date: "2026-05-20", note: "Mounted linear rails and completed gantry assembly. Smooth linear movement verified on all axes." },
+            { date: "2026-05-24", note: "Mains wiring checked and verified. Fired up MCU and established active serial connection to Raspberry Pi." }
+        ],
+        imageUrls: 'https://images.unsplash.com/photo-1615840287214-7fe58a8f3685?w=600'
+    }
+];
+
+
 // ==========================================================================
 // INITIALIZATION & LIFECYCLE
 // ==========================================================================
@@ -132,6 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Wire up User Authentication Forms and Sessions
     setupLoginHandlers();
+    
+    // Wire up Project Planner Handlers
+    setupProjectHandlers();
+    
     const hasActiveSession = checkUserSession();
 
     // Visual elements init
@@ -191,10 +232,12 @@ function switchTab(tabId) {
 function loadDatabase() {
     const savedSpools = localStorage.getItem('nexis_spools');
     const savedHardware = localStorage.getItem('nexis_hardware');
+    const savedProjects = localStorage.getItem('nexis_projects');
     const savedTheme = localStorage.getItem('nexis_theme') || 'dark';
 
     spools = savedSpools ? JSON.parse(savedSpools) : [];
     hardware = savedHardware ? JSON.parse(savedHardware) : [];
+    projects = savedProjects ? JSON.parse(savedProjects) : [];
     theme = savedTheme;
 
     // Apply Theme
@@ -290,9 +333,10 @@ function loadDatabase() {
     }
 
     // If database is completely empty (first run), seed with mock data
-    if (spools.length === 0 && hardware.length === 0) {
+    if (spools.length === 0 && hardware.length === 0 && projects.length === 0) {
         spools = [...MOCK_SPOOLS];
         hardware = [...MOCK_HARDWARE];
+        projects = [...MOCK_PROJECTS];
         saveDatabase();
         logActivity('Initialized inventory with beautiful mock database demo data', 'info');
     } else if (migrated) {
@@ -307,6 +351,7 @@ function loadDatabase() {
 function saveDatabase() {
     localStorage.setItem('nexis_spools', JSON.stringify(spools));
     localStorage.setItem('nexis_hardware', JSON.stringify(hardware));
+    localStorage.setItem('nexis_projects', JSON.stringify(projects));
     
     // Update Sync metadata labels
     if (document.getElementById('spools-export-meta')) {
@@ -393,6 +438,7 @@ function renderAll() {
     renderCabinetTabs();
     renderCabinetGrid();
     renderHardware();
+    renderProjects();
     saveDatabase();
 
     // Trigger auto-sync if active, URL is set, and not suppressed
@@ -1561,6 +1607,45 @@ async function fetchFromCloud() {
                     }));
                 }
                 
+                if (data.projects && Array.isArray(data.projects)) {
+                    projects = data.projects.map((proj, idx) => {
+                        let parsedTasks = [];
+                        let parsedBudget = [];
+                        let parsedStatusLog = [];
+                        
+                        try {
+                            parsedTasks = proj.tasksJson ? JSON.parse(proj.tasksJson) : [];
+                            if (!Array.isArray(parsedTasks)) parsedTasks = [];
+                        } catch (e) { console.error("Error parsing tasksJson", e); }
+                        
+                        try {
+                            parsedBudget = proj.budgetJson ? JSON.parse(proj.budgetJson) : [];
+                            if (!Array.isArray(parsedBudget)) parsedBudget = [];
+                        } catch (e) { console.error("Error parsing budgetJson", e); }
+                        
+                        try {
+                            parsedStatusLog = proj.statusLogJson ? JSON.parse(proj.statusLogJson) : [];
+                            if (!Array.isArray(parsedStatusLog)) parsedStatusLog = [];
+                        } catch (e) { console.error("Error parsing statusLogJson", e); }
+
+                        return {
+                            projectId: proj.projectId || `proj-cloud-${Date.now()}-${idx}`,
+                            projectName: proj.projectName || 'Unnamed Project',
+                            description: proj.description || '',
+                            status: proj.status || 'In Progress',
+                            startDate: proj.startDate || '',
+                            endDate: proj.endDate || '',
+                            successReason: proj.successReason || '',
+                            lessonsLearned: proj.lessonsLearned || '',
+                            futurePlans: proj.futurePlans || '',
+                            tasks: parsedTasks,
+                            budget: parsedBudget,
+                            statusLog: parsedStatusLog,
+                            imageUrls: proj.imageUrls || ''
+                        };
+                    });
+                }
+                
                 renderAll();
                 suppressAutoSync = false;
                 hasFetchedFromCloud = true;
@@ -1636,6 +1721,21 @@ async function pushToCloud(isAutoSync = false) {
                 qty: hw.qty,
                 minQty: hw.minQty !== undefined && hw.minQty !== null && hw.minQty !== '' ? hw.minQty : '10',
                 remarks: hw.remarks
+            })),
+            projects: projects.map(proj => ({
+                projectId: proj.projectId,
+                projectName: proj.projectName,
+                description: proj.description,
+                status: proj.status,
+                startDate: proj.startDate,
+                endDate: proj.endDate,
+                successReason: proj.successReason,
+                lessonsLearned: proj.lessonsLearned,
+                futurePlans: proj.futurePlans,
+                tasksJson: JSON.stringify(proj.tasks || []),
+                budgetJson: JSON.stringify(proj.budget || []),
+                statusLogJson: JSON.stringify(proj.statusLog || []),
+                imageUrls: proj.imageUrls
             }))
         };
 
@@ -1962,4 +2062,960 @@ function setupLoginHandlers() {
         });
     }
 }
+
+// ==========================================================================
+// PROFESSIONAL PROJECT PLANNER & TASK TRACKER CONTROLLERS
+// ==========================================================================
+
+// Temporary arrays to hold list items inside the Project Creation Modal
+let modalProjectTasks = [];
+let modalProjectBudget = [];
+
+function setupProjectHandlers() {
+    const btnAddProject = document.getElementById('btn-add-project');
+    const btnCloseProjectModal = document.getElementById('btn-close-project-modal');
+    const btnCancelProject = document.getElementById('btn-cancel-project');
+    const projStatusSelect = document.getElementById('proj-status');
+    const projSuccessReason = document.getElementById('proj-successReason');
+    const projEndDate = document.getElementById('proj-endDate');
+    
+    const btnAddProjTask = document.getElementById('btn-add-proj-task');
+    const btnAddProjBudget = document.getElementById('btn-add-proj-budget');
+    
+    const filterProjectStatus = document.getElementById('filter-project-status');
+
+    if (!modalProject || !formProject) return;
+
+    // 1. Open Modal (New Project Mode)
+    if (btnAddProject) {
+        btnAddProject.addEventListener('click', () => {
+            document.getElementById('modal-project-title').innerText = 'Add New Project';
+            formProject.reset();
+            document.getElementById('project-id').value = '';
+            
+            // Set start date to today's date automatically
+            document.getElementById('proj-startDate').value = new Date().toISOString().split('T')[0];
+            
+            // Reset modal temporary builders
+            modalProjectTasks = [];
+            modalProjectBudget = [];
+            renderModalTasks();
+            renderModalBudget();
+            
+            // Toggle visibility groups
+            toggleProjectModalRemarks('Planning');
+            modalProject.showModal();
+        });
+    }
+
+    // 2. Close Modals
+    if (btnCloseProjectModal) {
+        btnCloseProjectModal.addEventListener('click', () => modalProject.close());
+    }
+    if (btnCancelProject) {
+        btnCancelProject.addEventListener('click', () => modalProject.close());
+    }
+
+    // Close when clicking outside dialog frame
+    modalProject.addEventListener('click', (e) => {
+        const dialogDimensions = modalProject.getBoundingClientRect();
+        if (
+            e.clientX < dialogDimensions.left ||
+            e.clientX > dialogDimensions.right ||
+            e.clientY < dialogDimensions.top ||
+            e.clientY > dialogDimensions.bottom
+        ) {
+            modalProject.close();
+        }
+    });
+
+    // 3. Stage Change: Toggle Remarks & End Date
+    if (projStatusSelect) {
+        projStatusSelect.addEventListener('change', (e) => {
+            toggleProjectModalRemarks(e.target.value);
+        });
+    }
+
+    // 4. Modal Sub-task List Builder
+    if (btnAddProjTask) {
+        btnAddProjTask.addEventListener('click', () => {
+            const taskInput = document.getElementById('proj-task-input');
+            const taskVal = taskInput.value.trim();
+            if (!taskVal) return;
+
+            modalProjectTasks.push({
+                id: 't-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                text: taskVal,
+                completed: false
+            });
+
+            taskInput.value = '';
+            renderModalTasks();
+        });
+    }
+
+    // 5. Modal Budget Parts Builder
+    if (btnAddProjBudget) {
+        btnAddProjBudget.addEventListener('click', () => {
+            const itemInput = document.getElementById('proj-budget-item');
+            const costInput = document.getElementById('proj-budget-cost');
+            const itemVal = itemInput.value.trim();
+            const costVal = parseFloat(costInput.value);
+
+            if (!itemVal || isNaN(costVal) || costVal < 0) return;
+
+            modalProjectBudget.push({
+                id: 'b-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                item: itemVal,
+                cost: costVal
+            });
+
+            itemInput.value = '';
+            costInput.value = '';
+            renderModalBudget();
+        });
+    }
+
+    // 6. Project Modal Form Submit (Save / Overwrite)
+    formProject.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveProjectForm();
+    });
+
+    // 7. View Board Status Filter dropdown
+    if (filterProjectStatus) {
+        filterProjectStatus.addEventListener('change', () => {
+            renderProjects();
+        });
+    }
+}
+
+// Toggle visibility of End Date and Closure Remarks fields based on Selected Stage
+function toggleProjectModalRemarks(status) {
+    const endDateGroup = document.getElementById('proj-endDate-group');
+    const remarksGroup = document.getElementById('proj-remarks-group');
+    const remarksTextarea = document.getElementById('proj-successReason');
+    const endDateInput = document.getElementById('proj-endDate');
+
+    if (status === 'Completed' || status === 'Cancelled') {
+        if (endDateGroup) endDateGroup.classList.remove('hidden');
+        if (remarksGroup) remarksGroup.classList.remove('hidden');
+        if (remarksTextarea) remarksTextarea.required = true;
+        
+        // Auto-fill end date if empty
+        if (endDateInput && !endDateInput.value) {
+            endDateInput.value = new Date().toISOString().split('T')[0];
+        }
+    } else {
+        if (endDateGroup) endDateGroup.classList.add('hidden');
+        if (remarksGroup) remarksGroup.classList.add('hidden');
+        if (remarksTextarea) {
+            remarksTextarea.required = false;
+            remarksTextarea.value = '';
+        }
+        if (endDateInput) endDateInput.value = '';
+    }
+}
+
+// Modal Builders Render UI
+function renderModalTasks() {
+    const list = document.getElementById('proj-tasks-list');
+    if (!list) return;
+    list.innerHTML = '';
+    
+    modalProjectTasks.forEach((t, idx) => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px;';
+        li.innerHTML = `
+            <span>${t.text}</span>
+            <button type="button" class="icon-only-btn delete-icon delete-modal-task" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove task">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        `;
+        list.appendChild(li);
+    });
+
+    document.querySelectorAll('.delete-modal-task').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+            modalProjectTasks.splice(idx, 1);
+            renderModalTasks();
+        });
+    });
+}
+
+function renderModalBudget() {
+    const list = document.getElementById('proj-budget-list');
+    if (!list) return;
+    list.innerHTML = '';
+    
+    modalProjectBudget.forEach((b, idx) => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px;';
+        li.innerHTML = `
+            <span style="font-weight:600;">${b.item}</span>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="color:var(--secondary); font-weight:700;">$${b.cost.toFixed(2)}</span>
+                <button type="button" class="icon-only-btn delete-icon delete-modal-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        `;
+        list.appendChild(li);
+    });
+
+    document.querySelectorAll('.delete-modal-budget').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+            modalProjectBudget.splice(idx, 1);
+            renderModalBudget();
+        });
+    });
+}
+
+// Save Project Form Action
+function saveProjectForm() {
+    const id = document.getElementById('project-id').value;
+    const name = document.getElementById('proj-name').value.trim();
+    const status = document.getElementById('proj-status').value;
+    const startDate = document.getElementById('proj-startDate').value;
+    const endDate = document.getElementById('proj-endDate').value;
+    const imageUrls = document.getElementById('proj-imageUrls').value.trim();
+    const description = document.getElementById('proj-description').value.trim();
+    const lessonsLearned = document.getElementById('proj-lessonsLearned').value.trim();
+    const futurePlans = document.getElementById('proj-futurePlans').value.trim();
+    const successReason = document.getElementById('proj-successReason').value.trim();
+
+    if (!name || !startDate || !description) return;
+
+    if (id) {
+        // Edit Mode: overwrite details
+        const idx = projects.findIndex(p => p.projectId === id);
+        if (idx !== -1) {
+            const existingLog = projects[idx].statusLog || [];
+            projects[idx] = {
+                projectId: id,
+                projectName: name,
+                description,
+                status,
+                startDate,
+                endDate: (status === 'Completed' || status === 'Cancelled') ? (endDate || new Date().toISOString().split('T')[0]) : '',
+                successReason,
+                lessonsLearned,
+                futurePlans,
+                tasks: modalProjectTasks,
+                budget: modalProjectBudget,
+                statusLog: existingLog,
+                imageUrls
+            };
+            logActivity(`Updated project details of "${name}"`, 'info');
+        }
+    } else {
+        // Create Mode: add new project with default creation log
+        const newProj = {
+            projectId: 'proj-' + Date.now(),
+            projectName: name,
+            description,
+            status,
+            startDate,
+            endDate: (status === 'Completed' || status === 'Cancelled') ? (endDate || new Date().toISOString().split('T')[0]) : '',
+            successReason,
+            lessonsLearned,
+            futurePlans,
+            tasks: modalProjectTasks,
+            budget: modalProjectBudget,
+            statusLog: [
+                {
+                    date: new Date().toISOString().split('T')[0],
+                    note: `Project created at stage: ${status}`
+                }
+            ],
+            imageUrls
+        };
+        projects.push(newProj);
+        logActivity(`Successfully started new project build: "${name}"`, 'success');
+    }
+
+    renderAll();
+    modalProject.close();
+}
+
+function openEditProjectModal(id) {
+    const p = projects.find(proj => proj.projectId === id);
+    if (!p) return;
+
+    document.getElementById('modal-project-title').innerText = 'Edit Project Details';
+    document.getElementById('project-id').value = p.projectId;
+    document.getElementById('proj-name').value = p.projectName;
+    document.getElementById('proj-status').value = p.status;
+    document.getElementById('proj-startDate').value = p.startDate;
+    document.getElementById('proj-endDate').value = p.endDate || '';
+    document.getElementById('proj-imageUrls').value = p.imageUrls || '';
+    document.getElementById('proj-description').value = p.description;
+    document.getElementById('proj-lessonsLearned').value = p.lessonsLearned || '';
+    document.getElementById('proj-futurePlans').value = p.futurePlans || '';
+    document.getElementById('proj-successReason').value = p.successReason || '';
+
+    // Copy arrays to modal variables
+    modalProjectTasks = JSON.parse(JSON.stringify(p.tasks || []));
+    modalProjectBudget = JSON.parse(JSON.stringify(p.budget || []));
+    
+    renderModalTasks();
+    renderModalBudget();
+    
+    toggleProjectModalRemarks(p.status);
+    modalProject.showModal();
+}
+
+function deleteProject(id) {
+    const p = projects.find(proj => proj.projectId === id);
+    const label = p ? p.projectName : 'Unknown Project';
+
+    if (confirm(`CAUTION: Are you absolutely sure you want to delete the project "${label}"?\nThis will erase all checklists, parts cost, and journals.`)) {
+        projects = projects.filter(proj => proj.projectId !== id);
+        logActivity(`Deleted project "${label}" from plan`, 'warning');
+        renderAll();
+    }
+}
+
+// CORE PROJECT RENDERING BOARD
+function renderProjects() {
+    const container = document.getElementById('projects-list-container');
+    const filterStatusSelect = document.getElementById('filter-project-status');
+    if (!container) return;
+
+    const statusFilter = filterStatusSelect ? filterStatusSelect.value : 'all';
+
+    // 1. Calculate General Dashboard Overview Stats across all projects
+    const totalProjectsCount = projects.length;
+    const totalSpendVal = projects.reduce((sum, p) => {
+        const projSpend = (p.budget || []).reduce((s, b) => s + (parseFloat(b.cost) || 0), 0);
+        return sum + projSpend;
+    }, 0);
+    const activeProjectsCount = projects.filter(p => p.status === 'In Progress').length;
+    const totalLogsCount = projects.reduce((sum, p) => sum + (p.statusLog || []).length, 0);
+
+    // Apply to Stats cards
+    const projStatTotalNode = document.getElementById('proj-stat-total');
+    const projStatSpendNode = document.getElementById('proj-stat-spend');
+    const projStatActiveNode = document.getElementById('proj-stat-active');
+    const projStatLogsNode = document.getElementById('proj-stat-logs');
+
+    if (projStatTotalNode) projStatTotalNode.innerText = totalProjectsCount;
+    if (projStatSpendNode) projStatSpendNode.innerText = `$${totalSpendVal.toFixed(2)}`;
+    if (projStatActiveNode) projStatActiveNode.innerText = activeProjectsCount;
+    if (projStatLogsNode) projStatLogsNode.innerText = totalLogsCount;
+
+    // 2. Filter Projects
+    const filtered = projects.filter(p => {
+        // Global search match
+        const matchesSearch = searchQuery === '' || 
+            p.projectName.toLowerCase().includes(searchQuery) ||
+            p.description.toLowerCase().includes(searchQuery) ||
+            (p.lessonsLearned || '').toLowerCase().includes(searchQuery) ||
+            (p.futurePlans || '').toLowerCase().includes(searchQuery) ||
+            (p.tasks || []).some(t => t.text.toLowerCase().includes(searchQuery));
+
+        // Stage matches
+        const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="view-placeholder" style="grid-column: 1 / -1; padding: 60px 20px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px; height:48px; margin-bottom:12px; color:var(--text-muted);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <p>No matching projects found in your planner board.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+
+    filtered.forEach(p => {
+        // Determine status-specific variables for visual aesthetics
+        let statusColor = 'var(--primary)';
+        let statusGlow = 'rgba(99, 102, 241, 0.04)';
+        let statusShadowGlow = 'rgba(99, 102, 241, 0.12)';
+        let statusClass = 'good';
+
+        if (p.status === 'Planning') {
+            statusColor = 'var(--purple)';
+            statusGlow = 'rgba(168, 85, 247, 0.04)';
+            statusShadowGlow = 'rgba(168, 85, 247, 0.12)';
+            statusClass = 'low';
+        } else if (p.status === 'In Progress') {
+            statusColor = 'var(--secondary)';
+            statusGlow = 'rgba(6, 182, 212, 0.04)';
+            statusShadowGlow = 'rgba(6, 182, 212, 0.12)';
+            statusClass = 'good';
+        } else if (p.status === 'On Hold') {
+            statusColor = 'var(--warning)';
+            statusGlow = 'rgba(245, 158, 11, 0.04)';
+            statusShadowGlow = 'rgba(245, 158, 11, 0.12)';
+            statusClass = 'low';
+        } else if (p.status === 'Completed') {
+            statusColor = 'var(--success)';
+            statusGlow = 'rgba(16, 185, 129, 0.04)';
+            statusShadowGlow = 'rgba(16, 185, 129, 0.12)';
+            statusClass = 'good';
+        } else if (p.status === 'Cancelled') {
+            statusColor = 'var(--danger)';
+            statusGlow = 'rgba(239, 68, 68, 0.04)';
+            statusShadowGlow = 'rgba(239, 68, 68, 0.12)';
+            statusClass = 'out';
+        }
+
+        // Parse images array
+        const imagesList = (p.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
+
+        // Sub-tasks counts and progress percentage
+        const taskList = p.tasks || [];
+        const totalTasks = taskList.length;
+        const completedTasks = taskList.filter(t => t.completed).length;
+        const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+        // Sum Budget Spent
+        const budgetList = p.budget || [];
+        const projectSpend = budgetList.reduce((sum, b) => sum + (parseFloat(b.cost) || 0), 0);
+
+        // Calculate active timelines: "Days Open" age logic
+        let daysOpenLabel = '';
+        if (p.startDate) {
+            const startMs = Date.parse(p.startDate);
+            if (!isNaN(startMs)) {
+                if (p.status === 'Completed' || p.status === 'Cancelled') {
+                    const endMs = p.endDate ? Date.parse(p.endDate) : Date.now();
+                    const durationDays = Math.max(Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)), 1);
+                    daysOpenLabel = `Duration: ${durationDays} ${durationDays === 1 ? 'day' : 'days'}`;
+                } else {
+                    const openDays = Math.max(Math.floor((Date.now() - startMs) / (1000 * 60 * 60 * 24)), 0);
+                    daysOpenLabel = `Active: ${openDays} ${openDays === 1 ? 'day' : 'days'} open`;
+                }
+            }
+        }
+
+        const card = document.createElement('div');
+        card.className = 'project-card glass-panel';
+        card.setAttribute('style', `--status-color: ${statusColor}; --status-glow: ${statusGlow}; --status-shadow-glow: ${statusShadowGlow};`);
+        
+        // Carousel index tracking
+        if (projectCarouselIndices[p.projectId] === undefined) {
+            projectCarouselIndices[p.projectId] = 0;
+        }
+
+        // 1. Build Card Header & Image block
+        let imageMarkup = '';
+        if (imagesList.length > 0) {
+            const activeIndex = projectCarouselIndices[p.projectId];
+            
+            let dotsMarkup = '';
+            if (imagesList.length > 1) {
+                dotsMarkup = `<div class="project-carousel-dots">` + 
+                    imagesList.map((_, i) => `<span class="project-carousel-dot ${i === activeIndex ? 'active' : ''}" data-project="${p.projectId}" data-slide="${i}"></span>`).join('') +
+                    `</div>`;
+            }
+
+            let controlsMarkup = '';
+            if (imagesList.length > 1) {
+                controlsMarkup = `
+                    <button type="button" class="project-carousel-btn prev project-carousel-nav" data-project="${p.projectId}" data-dir="-1">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <button type="button" class="project-carousel-btn next project-carousel-nav" data-project="${p.projectId}" data-dir="1">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                `;
+            }
+
+            imageMarkup = `
+                <div class="project-carousel-wrapper">
+                    ${controlsMarkup}
+                    <div class="project-carousel-track" style="transform: translateX(-${activeIndex * 100}%);">
+                        ${imagesList.map(url => `
+                            <div class="project-carousel-slide">
+                                <img src="${url}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%232e2942%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2394a3b8%22 font-family=%22Plus Jakarta Sans%22 font-size=%2212%22>Failed to load image</text></svg>';" alt="Build photo">
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${dotsMarkup}
+                </div>
+            `;
+        } else {
+            imageMarkup = `
+                <div class="project-carousel-wrapper">
+                    <div class="project-no-image">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        <span>No build photos attached</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 2. Checklist Items list markup
+        let checklistMarkup = '';
+        if (totalTasks > 0) {
+            checklistMarkup = `
+                <ul class="project-card-checklist">
+                    ${taskList.map(t => `
+                        <li class="project-card-task-item" data-project="${p.projectId}" data-task="${t.id}">
+                            <input type="checkbox" ${t.completed ? 'checked' : ''} class="project-card-task-checkbox">
+                            <span class="project-card-task-text ${t.completed ? 'completed' : ''}">${t.text}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        } else {
+            checklistMarkup = `<p style="font-size:12px; color:var(--text-muted); font-style:italic;">No checklist items added. Edit project to build your checklist.</p>`;
+        }
+
+        // 3. Budget parts list micro-table
+        let budgetMarkup = '';
+        if (budgetList.length > 0) {
+            budgetMarkup = `
+                <table class="project-card-budget-table">
+                    <thead>
+                        <tr>
+                            <th>Part / Material</th>
+                            <th class="text-right">Price</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${budgetList.map(b => `
+                            <tr>
+                                <td style="font-weight:600;">${b.item}</td>
+                                <td class="text-right" style="color:var(--text-primary); font-weight:700;">$${b.cost.toFixed(2)}</td>
+                                <td class="text-right">
+                                    <button type="button" class="icon-only-btn delete-icon delete-card-budget-item" data-project="${p.projectId}" data-item="${b.id}" style="padding:2px; display:inline-flex;" title="Delete purchase">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            budgetMarkup = `<p style="font-size:12px; color:var(--text-muted); font-style:italic; margin-bottom:12px;">No logged parts. Use inputs below to add a purchase.</p>`;
+        }
+
+        // 4. Daily Diaries logs lists vertical trail
+        let logsMarkup = '';
+        const logsList = p.statusLog || [];
+        if (logsList.length > 0) {
+            logsMarkup = `
+                <div class="project-card-timeline">
+                    ${logsList.map(log => `
+                        <div class="project-card-timeline-item">
+                            <div class="project-card-timeline-bullet"></div>
+                            <div class="project-card-timeline-date">${log.date}</div>
+                            <div class="project-card-timeline-note">${log.note}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            logsMarkup = `<p style="font-size:12px; color:var(--text-muted); font-style:italic; margin-bottom:12px;">No logged diary journals. Add progress entries below.</p>`;
+        }
+
+        // 5. Lessons Learned / Future Plans
+        let notesDrawerMarkup = '';
+        if (p.lessonsLearned || p.futurePlans) {
+            notesDrawerMarkup = `
+                <div class="project-drawer" data-drawer="notes">
+                    <button class="project-drawer-trigger">
+                        <span>💡 Reference & Lessons Learned</span>
+                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="project-drawer-content" style="display:flex; flex-direction:column; gap:12px;">
+                        ${p.lessonsLearned ? `<div><h5 style="font-size:11px; text-transform:uppercase; color:var(--purple); font-weight:700;">Lessons Learned:</h5><p style="font-size:12px; font-style:italic; margin-top:2px; line-height:1.4; color:var(--text-secondary);">${p.lessonsLearned}</p></div>` : ''}
+                        ${p.futurePlans ? `<div><h5 style="font-size:11px; text-transform:uppercase; color:var(--secondary); font-weight:700;">Future Plans:</h5><p style="font-size:12px; margin-top:2px; line-height:1.4; color:var(--text-secondary);">${p.futurePlans}</p></div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 6. Closure Remarks
+        let closureRemarksMarkup = '';
+        if ((p.status === 'Completed' || p.status === 'Cancelled') && p.successReason) {
+            closureRemarksMarkup = `
+                <div class="project-closure-remarks ${p.status === 'Cancelled' ? 'cancelled' : ''}">
+                    <div class="project-closure-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px; height:14px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span>${p.status === 'Completed' ? 'Closure Success Note' : 'Cancellation Reason'}</span>
+                    </div>
+                    <div class="project-closure-text">"${p.successReason}"</div>
+                </div>
+            `;
+        }
+
+        // Assemble full card HTML body
+        card.innerHTML = `
+            <div class="project-card-actions">
+                <button class="icon-only-btn edit-project" data-id="${p.projectId}" title="Edit project">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button class="icon-only-btn delete-icon delete-project" data-id="${p.projectId}" title="Delete project">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                </button>
+            </div>
+
+            <div class="project-card-header">
+                <div class="project-brand-material">
+                    <span class="project-date-badge">${p.startDate} ${p.endDate ? `&rarr; ${p.endDate}` : ''}</span>
+                    <span class="project-card-title">${p.projectName}</span>
+                </div>
+                <div class="project-status-row">
+                    <span class="status-pill ${statusClass}">
+                        <span class="status-indicator"></span>
+                        <span>${p.status}</span>
+                    </span>
+                    <span style="font-size:11px; font-weight:700; color:var(--text-muted);">${daysOpenLabel}</span>
+                </div>
+            </div>
+
+            ${imageMarkup}
+
+            <div class="project-progress-container">
+                <div class="project-progress-meta">
+                    <span class="project-progress-label">Task Progress</span>
+                    <span class="project-progress-percent">${progressPercent}%</span>
+                </div>
+                <div class="project-progress-outer">
+                    <div class="project-progress-inner" style="width: ${progressPercent}%;"></div>
+                </div>
+            </div>
+
+            <div class="project-details-grid">
+                <div class="project-description">"${p.description}"</div>
+                
+                <div class="project-info-row">
+                    <span class="project-info-label">Total Spend:</span>
+                    <span class="project-info-val" style="color:var(--secondary); font-size:14px;">$${projectSpend.toFixed(2)}</span>
+                </div>
+                <div class="project-info-row">
+                    <span class="project-info-label">Tasks Checked:</span>
+                    <span class="project-info-val">${completedTasks} / ${totalTasks} completed</span>
+                </div>
+            </div>
+
+            <!-- Expandable Drawers (Checklist, Budget, Diary status) -->
+            <div class="project-card-expanders">
+                <!-- 1. Tasks Checklist Drawer -->
+                <div class="project-drawer" data-drawer="tasks">
+                    <button class="project-drawer-trigger">
+                        <span>📝 Interactive Task Checklist (${completedTasks}/${totalTasks})</span>
+                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="project-drawer-content">
+                        ${checklistMarkup}
+                    </div>
+                </div>
+
+                <!-- 2. Budget cost ledger Drawer -->
+                <div class="project-drawer" data-drawer="budget">
+                    <button class="project-drawer-trigger">
+                        <span>💲 Parts & Budget Tracker (Spent: $${projectSpend.toFixed(2)})</span>
+                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="project-drawer-content">
+                        ${budgetMarkup}
+                        
+                        <!-- Quick purchase adding row directly on Card! -->
+                        <div class="card-drawer-input-row" style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.04); padding-top:12px;">
+                            <input type="text" placeholder="Add part bought..." class="card-budget-item-input" style="flex:2;">
+                            <input type="number" min="0" step="0.01" placeholder="$ Price" class="card-budget-cost-input" style="flex:1;">
+                            <button type="button" class="card-drawer-add-btn add-card-budget-item" data-project="${p.projectId}" title="Add purchase to ledger">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Daily Status timeline diary Drawer -->
+                <div class="project-drawer" data-drawer="timeline">
+                    <button class="project-drawer-trigger">
+                        <span>📅 Daily Status Diary (${logsList.length} logs)</span>
+                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="project-drawer-content">
+                        ${logsMarkup}
+
+                        <!-- Quick log adding row directly on Card! -->
+                        <div class="card-drawer-input-row" style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.04); padding-top:12px;">
+                            <input type="text" placeholder="Log today's progress..." class="card-timeline-note-input" style="flex:1;">
+                            <button type="button" class="card-drawer-add-btn add-card-timeline-item" data-project="${p.projectId}" title="Add entry to diary">Add Log</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Lessons learned Drawer -->
+                ${notesDrawerMarkup}
+            </div>
+
+            ${closureRemarksMarkup}
+        `;
+
+        container.appendChild(card);
+    });
+
+    // WIRING INTERACTION EVENT LISTENERS ON RENDERED CARDS
+
+    // 1. Drawer expand toggles
+    document.querySelectorAll('.project-drawer-trigger').forEach(trigger => {
+        trigger.addEventListener('click', (e) => {
+            const drawer = e.currentTarget.closest('.project-drawer');
+            drawer.classList.toggle('active');
+        });
+    });
+
+    // 2. Sub-tasks checklist checkboxes interactive toggle
+    document.querySelectorAll('.project-card-task-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            // Prevent double triggers if clicked exactly on checkbox input
+            if (e.target.type === 'checkbox') return;
+            
+            const checkbox = item.querySelector('.project-card-task-checkbox');
+            checkbox.checked = !checkbox.checked;
+            toggleCardTaskCompleted(item.getAttribute('data-project'), item.getAttribute('data-task'), checkbox.checked);
+        });
+    });
+
+    document.querySelectorAll('.project-card-task-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            const item = e.target.closest('.project-card-task-item');
+            toggleCardTaskCompleted(item.getAttribute('data-project'), item.getAttribute('data-task'), e.target.checked);
+        });
+    });
+
+    // 3. Delete purchase directly from card ledger drawer
+    document.querySelectorAll('.delete-card-budget-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const projId = btn.getAttribute('data-project');
+            const itemId = btn.getAttribute('data-item');
+            deleteCardBudgetItem(projId, itemId);
+        });
+    });
+
+    // 4. Quick add purchase directly from card drawer
+    document.querySelectorAll('.add-card-budget-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const projId = btn.getAttribute('data-project');
+            const container = btn.closest('.card-drawer-input-row');
+            const itemInput = container.querySelector('.card-budget-item-input');
+            const costInput = container.querySelector('.card-budget-cost-input');
+
+            const itemVal = itemInput.value.trim();
+            const costVal = parseFloat(costInput.value);
+
+            if (!itemVal || isNaN(costVal) || costVal < 0) return;
+
+            addCardBudgetItem(projId, itemVal, costVal);
+        });
+    });
+
+    // 5. Quick diary log entry directly from card drawer
+    document.querySelectorAll('.add-card-timeline-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const projId = btn.getAttribute('data-project');
+            const container = btn.closest('.card-drawer-input-row');
+            const noteInput = container.querySelector('.card-timeline-note-input');
+            const noteVal = noteInput.value.trim();
+
+            if (!noteVal) return;
+
+            addCardTimelineItem(projId, noteVal);
+        });
+    });
+
+    // 6. Image carousel arrow navigation button triggers
+    document.querySelectorAll('.project-carousel-nav').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const projId = btn.getAttribute('data-project');
+            const direction = parseInt(btn.getAttribute('data-dir'));
+            navigateCarousel(projId, direction);
+        });
+    });
+
+    // 7. Image carousel dots click indicators
+    document.querySelectorAll('.project-carousel-dot').forEach(dot => {
+        dot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const projId = dot.getAttribute('data-project');
+            const slideIndex = parseInt(dot.getAttribute('data-slide'));
+            jumpToCarouselSlide(projId, slideIndex);
+        });
+    });
+
+    // 8. Open edit project details modal dialog pre-fills
+    document.querySelectorAll('.edit-project').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            openEditProjectModal(id);
+        });
+    });
+
+    // 9. Delete project build plan
+    document.querySelectorAll('.delete-project').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.getAttribute('data-id');
+            deleteProject(id);
+        });
+    });
+}
+
+// INLINE PROJECT INTERACTION TRANSITIONS
+
+// 1. Checklist checkboxes checked/unchecked immediately updates databases
+function toggleCardTaskCompleted(projId, taskId, isCompleted) {
+    const projIdx = projects.findIndex(p => p.projectId === projId);
+    if (projIdx === -1) return;
+
+    const taskIdx = projects[projIdx].tasks.findIndex(t => t.id === taskId);
+    if (taskIdx === -1) return;
+
+    projects[projIdx].tasks[taskIdx].completed = isCompleted;
+
+    const taskText = projects[projIdx].tasks[taskIdx].text;
+    logActivity(`Checklist update: "${taskText}" marked ${isCompleted ? 'completed' : 'active'} on build card`, 'info');
+    
+    // Quick recalculations & storage saving
+    renderAll();
+}
+
+// 2. Budget cost entries inline additions and deletions immediately recalculates Spent stats
+function addCardBudgetItem(projId, item, cost) {
+    const projIdx = projects.findIndex(p => p.projectId === projId);
+    if (projIdx === -1) return;
+
+    projects[projIdx].budget.push({
+        id: 'b-' + Date.now(),
+        item: item,
+        cost: cost
+    });
+
+    logActivity(`Cost update: Logged purchase "${item}" ($${cost.toFixed(2)}) directly on card`, 'info');
+    
+    // Quick recalculations & storage saving
+    renderAll();
+}
+
+function deleteCardBudgetItem(projId, itemId) {
+    const projIdx = projects.findIndex(p => p.projectId === projId);
+    if (projIdx === -1) return;
+
+    const item = projects[projIdx].budget.find(b => b.id === itemId);
+    const itemName = item ? item.item : 'item';
+    const itemCost = item ? item.cost : 0;
+
+    projects[projIdx].budget = projects[projIdx].budget.filter(b => b.id !== itemId);
+
+    logActivity(`Cost update: Removed logged purchase "${itemName}" ($${itemCost.toFixed(2)}) from card`, 'warning');
+    
+    // Quick recalculations & storage saving
+    renderAll();
+}
+
+// 3. Chronological diary notes logged directly from card drawer
+function addCardTimelineItem(projId, note) {
+    const projIdx = projects.findIndex(p => p.projectId === projId);
+    if (projIdx === -1) return;
+
+    if (!projects[projIdx].statusLog) {
+        projects[projIdx].statusLog = [];
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    projects[projIdx].statusLog.push({
+        date: todayStr,
+        note: note
+    });
+
+    logActivity(`Progress update: Logged timeline status diary entry directly on card`, 'success');
+    
+    // Quick recalculations & storage saving
+    renderAll();
+}
+
+// 4. Image Carousel Track Transitions sliding calculations
+function navigateCarousel(projId, direction) {
+    const proj = projects.find(p => p.projectId === projId);
+    if (!proj) return;
+
+    const imagesList = (proj.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
+    if (imagesList.length <= 1) return;
+
+    let activeIndex = projectCarouselIndices[projId] || 0;
+    activeIndex = (activeIndex + direction + imagesList.length) % imagesList.length;
+    projectCarouselIndices[projId] = activeIndex;
+
+    // Shift Carousel track slider
+    const gridBoard = document.getElementById('projects-list-container');
+    if (!gridBoard) return;
+    
+    // Find the specific card
+    const cardNode = Array.from(gridBoard.querySelectorAll('.project-card')).find(c => {
+        const editBtn = c.querySelector('.edit-project');
+        return editBtn && editBtn.getAttribute('data-id') === projId;
+    });
+
+    if (cardNode) {
+        const track = cardNode.querySelector('.project-carousel-track');
+        if (track) {
+            track.style.transform = `translateX(-${activeIndex * 100}%)`;
+        }
+
+        // Toggle dots active classes
+        const dots = cardNode.querySelectorAll('.project-carousel-dot');
+        dots.forEach((dot, idx) => {
+            if (idx === activeIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+    }
+}
+
+function jumpToCarouselSlide(projId, slideIndex) {
+    const proj = projects.find(p => p.projectId === projId);
+    if (!proj) return;
+
+    const imagesList = (proj.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
+    if (slideIndex < 0 || slideIndex >= imagesList.length) return;
+
+    projectCarouselIndices[projId] = slideIndex;
+
+    // Shift Carousel track slider
+    const gridBoard = document.getElementById('projects-list-container');
+    if (!gridBoard) return;
+    
+    // Find the specific card
+    const cardNode = Array.from(gridBoard.querySelectorAll('.project-card')).find(c => {
+        const editBtn = c.querySelector('.edit-project');
+        return editBtn && editBtn.getAttribute('data-id') === projId;
+    });
+
+    if (cardNode) {
+        const track = cardNode.querySelector('.project-carousel-track');
+        if (track) {
+            track.style.transform = `translateX(-${slideIndex * 100}%)`;
+        }
+
+        // Toggle dots active classes
+        const dots = cardNode.querySelectorAll('.project-carousel-dot');
+        dots.forEach((dot, idx) => {
+            if (idx === slideIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+    }
+}
+
 
