@@ -519,7 +519,7 @@ function renderSpools() {
     filtered.forEach(sp => {
         const card = document.createElement('div');
         card.className = 'spool-card glass-panel';
-        card.setAttribute('style', `--accent-color: ${sp.hex}; --glow-color: ${sp.hex}0a;`);
+        card.setAttribute('style', `--accent-color: var(--primary); --glow-color: rgba(var(--primary-rgb), 0.05);`);
         
         const qty = parseInt(sp.qty) || 0;
         const reorder = parseInt(sp.reorder) || 0;
@@ -544,7 +544,7 @@ function renderSpools() {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
                 <button class="icon-only-btn delete-icon delete-spool" data-id="${sp.id}" title="Delete spool">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                 </button>
             </div>
 
@@ -560,8 +560,9 @@ function renderSpools() {
             </div>
 
             <div class="spool-visual-section">
-                <div class="spool-avatar-wrapper" style="background: radial-gradient(circle, ${sp.hex}22, ${sp.hex}05); border: 1.5px solid ${sp.hex}30; box-shadow: 0 8px 20px ${sp.hex}18;">
-                    <svg class="spool-avatar-icon" viewBox="0 0 24 24" fill="none" stroke="${sp.hex}" stroke-width="2">
+                <!-- Premium High-Visibility Spool Avatar (Unified Theme Pattern) -->
+                <div class="spool-avatar-wrapper" style="background: radial-gradient(circle, rgba(var(--primary-rgb), 0.12), rgba(var(--primary-rgb), 0.02)); border: 1.5px solid rgba(var(--primary-rgb), 0.22); box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.08);">
+                    <svg class="spool-avatar-icon" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5.64 5.64l1.42 1.42M16.94 16.94l1.42 1.42M5.64 18.36l1.42-1.42M16.94 7.06l1.42-1.42"></path>
@@ -569,9 +570,11 @@ function renderSpools() {
                 </div>
 
                 <div class="spools-details-list">
-                    <div class="spool-detail-row">
+                    <div class="spool-detail-row" style="align-items: center; gap: 8px;">
                         <span>Color:</span>
-                        <span class="spool-detail-value" style="color: ${sp.hex}; font-weight: 700;">${sp.color}</span>
+                        <!-- Custom high-contrast specific swatch circle -->
+                        <span class="spool-color-circle" style="background-color: ${sp.hex}; display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); vertical-align: middle;"></span>
+                        <span class="spool-detail-value">${sp.color}</span>
                     </div>
                     <div class="spool-detail-row">
                         <span>Cabinet:</span>

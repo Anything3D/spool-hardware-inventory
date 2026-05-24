@@ -766,13 +766,16 @@ body {
     margin-top: 2px;
 }
 
-/* Colored visual status indicator */
+/* Colored visual status indicator with high-contrast ring protective borders */
 .spool-color-circle {
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: var(--shadow-sm);
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 0 0 1px var(--border-color), var(--shadow-sm);
+    display: inline-block;
+    vertical-align: middle;
+    transition: var(--transition-smooth);
 }
 
 .spool-visual-section {
@@ -2132,15 +2135,67 @@ body {
         justify-content: flex-end !important;
     }
 
-    /* Responsive Cabinet Map */
+    /* Responsive Cabinet Map - Compact 5x4 physical layout representation */
     .cabinet-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 6px !important;
     }
     
     .cabinet-drawer {
-        aspect-ratio: 1.8 / 1 !important;
-        padding: 8px !important;
+        aspect-ratio: 1.15 / 1 !important;
+        padding: 6px !important;
+        min-height: 52px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: var(--border-radius-sm) !important;
+    }
+
+    /* Hide the category and specification texts inside the compact drawer cell on mobile */
+    .cabinet-drawer .drawer-meta-bottom {
+        display: none !important;
+    }
+    
+    /* Scale down and reposition metallic handle to keep drawer representation */
+    .cabinet-drawer::after {
+        width: 18px !important;
+        height: 3px !important;
+        top: auto !important;
+        bottom: 5px !important;
+        transform: translateX(-50%) !important;
+    }
+    
+    /* Center the top labels and badge layout */
+    .cabinet-drawer .drawer-meta-top {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 2px !important;
+        width: 100% !important;
+    }
+    
+    .cabinet-drawer .drawer-label {
+        font-size: 10px !important;
+        position: static !important;
+        color: var(--text-primary) !important;
+    }
+    
+    .cabinet-drawer .drawer-qty-badge {
+        font-size: 8.5px !important;
+        padding: 1px 4px !important;
+        line-height: 1 !important;
+    }
+
+    .cabinet-drawer.drawer-empty .drawer-add-icon {
+        width: 16px !important;
+        height: 16px !important;
+        margin-top: 1px !important;
+    }
+    
+    .cabinet-drawer.drawer-empty .drawer-add-icon svg {
+        width: 10px !important;
+        height: 10px !important;
     }
     
     .cabinet-section-header {
