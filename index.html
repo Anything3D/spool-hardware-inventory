@@ -41,38 +41,26 @@
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="login-username">Username</label>
                     <div class="input-icon-wrapper" style="position: relative; width: 100%;">
-                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <input type="text" id="login-username" placeholder="Enter username" style="padding-left: 42px; background-color: var(--bg-surface-elevated); border: 1px solid rgba(255, 255, 255, 0.12);" required>
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted); z-index: 10;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <input type="text" id="login-username" placeholder="Enter username" class="login-input" required>
                     </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="login-password">Password</label>
                     <div class="input-icon-wrapper" style="position: relative; width: 100%;">
-                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        <input type="password" id="login-password" placeholder="Enter password" style="padding-left: 42px; padding-right: 42px; background-color: var(--bg-surface-elevated); border: 1px solid rgba(255, 255, 255, 0.12);" required>
-                        <button type="button" class="eye-toggle-btn" id="btn-toggle-password" title="Show/Hide Password" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted); z-index: 10;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <input type="password" id="login-password" placeholder="Enter password" class="login-input" style="padding-right: 42px;" required>
+                        <button type="button" class="eye-toggle-btn" id="btn-toggle-password" title="Show/Hide Password" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth); z-index: 10;">
                             <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
                     </div>
                 </div>
 
-                <!-- Expander to configure Sheets Web App URL directly on login card -->
-                <div class="login-config-expander" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 4px;">
-                    <button type="button" id="btn-toggle-login-config" class="expander-trigger-btn" style="display: flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-heading); font-size: 12.5px; font-weight: 600; cursor: pointer; width: 100%; transition: var(--transition-smooth);">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px; transition: transform 0.3s ease;"><path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.3-2-1.5-3.8-3.2-4.8L20 4H12v8l2.5-2.5c1.2.7 2 2 2.2 3.5.2.9 0 1.8-.4 2.6l4.9 3.9z"></path></svg>
-                        <span>Link Google Sheets Database</span>
-                    </button>
-                    <div id="login-config-fields" class="expander-content hidden" style="margin-top: 12px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="login-cloud-url" style="font-size: 11px;">Google Web App URL</label>
-                            <input type="text" id="login-cloud-url" placeholder="https://script.google.com/macros/s/.../exec" style="background-color: var(--bg-surface-elevated); border: 1px solid rgba(255, 255, 255, 0.12);">
-                            <span class="field-help" style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; display: block; line-height: 1.4;">Paste your deployed Google Apps Script Web App URL to load credentials and sync live.</span>
-                        </div>
-                    </div>
-                </div>
+                <!-- Silent Google Sheets Cloud URL connection field (maintains robust sync without visual noise) -->
+                <input type="hidden" id="login-cloud-url">
 
-                <button type="submit" id="btn-login-submit" class="primary-btn full-width login-submit-btn" style="margin-top: 8px; justify-content: center; height: 42px;">
+                <button type="submit" id="btn-login-submit" class="primary-btn full-width login-submit-btn" style="margin-top: 12px; justify-content: center; height: 44px; font-weight: 700; font-size: 14px; border-radius: 10px;">
                     <span>Sign In</span>
                 </button>
             </form>
@@ -1021,6 +1009,6 @@
         </div>
     </dialog>
 
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=3"></script>
 </body>
 </html>

@@ -3146,6 +3146,49 @@ textarea::placeholder {
     opacity: 0.6;
 }
 
+/* Premium Readable Login Overrides */
+.login-input {
+    width: 100%;
+    height: 46px;
+    padding: 10px 16px 10px 42px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #ffffff !important;
+    background-color: rgba(15, 23, 42, 0.6) !important;
+    border: 1.5px solid rgba(99, 102, 241, 0.25) !important;
+    border-radius: 10px !important;
+    outline: none !important;
+    transition: all 0.3s ease !important;
+}
+
+.login-input:focus {
+    border-color: var(--primary) !important;
+    background-color: rgba(15, 23, 42, 0.85) !important;
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.2) !important;
+}
+
+.login-card label {
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    font-size: 12.5px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 6px !important;
+    display: block !important;
+}
+
+[data-theme="light"] .login-input {
+    color: #1e293b !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
+}
+
+[data-theme="light"] .login-input:focus {
+    border-color: var(--primary) !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.15) !important;
+}
+
 
 
 
