@@ -751,12 +751,12 @@ function renderCabinetGrid() {
     for (let i = 1; i <= 20; i++) {
         const boxLabel = `${activeCabinetSection}${i}`;
         const match = hardware.find(hw => hw.boxNo.trim().toUpperCase() === boxLabel);
+        const isOccupied = match && match.category && match.category.trim() !== '';
         
         const drawerDiv = document.createElement('div');
         
-        if (match) {
-            const stockInfo = getStockLevelInfo(match.qty, match.minQty);
-            drawerDiv.className = `cabinet-drawer drawer-${stockInfo.statusClass}`;
+        if (isOccupied) {
+            drawerDiv.className = 'cabinet-drawer drawer-occupied';
             if (activeCabinetFilter === boxLabel) {
                 drawerDiv.classList.add('active-filter');
             }
@@ -770,11 +770,13 @@ function renderCabinetGrid() {
                 sizeStr = ` (${sizes.join('×')}mm)`;
             }
             
+            const displayQty = match.qty !== undefined && match.qty !== null && String(match.qty).trim() !== '' ? match.qty : '0';
+            
             // Occupied drawer details
             drawerDiv.innerHTML = `
                 <div class="drawer-meta-top">
                     <span class="drawer-label">${boxLabel}</span>
-                    <span class="drawer-qty-badge">${match.qty}</span>
+                    <span class="drawer-qty-badge">${displayQty}</span>
                 </div>
                 <div class="drawer-meta-bottom">
                     <span class="drawer-category">${match.category}</span>
@@ -802,11 +804,15 @@ function renderCabinetGrid() {
                 </div>
             `;
             
-            // Open form with box prefill
+            // Open form with box prefill. Prefill ID if a blank database row already exists.
             drawerDiv.addEventListener('click', () => {
                 document.getElementById('modal-hardware-title').innerText = `Add Hardware (Box ${boxLabel})`;
                 formHardware.reset();
-                document.getElementById('hardware-id').value = '';
+                if (match) {
+                    document.getElementById('hardware-id').value = match.id;
+                } else {
+                    document.getElementById('hardware-id').value = '';
+                }
                 document.getElementById('hw-boxNo').value = boxLabel;
                 modalHardware.showModal();
             });
@@ -1417,8 +1423,8 @@ function runCSVImport(csvText) {
             };
 
             const boxNo = getVal(['box no.', 'boxno', 'drawer', 'location', 'box']).toUpperCase();
-            const category = getVal(['category', 'type', 'partname', 'name']) || 'Screw';
-            const specification = getVal(['specification', 'spec', 'threadsize', 'size']) || 'M3';
+            const category = getVal(['category', 'type', 'partname', 'name']) || '';
+            const specification = getVal(['specification', 'spec', 'threadsize', 'size']) || '';
             const sizeLD = getVal(['l/d', 'size (l/d)', 'length', 'l', 'd']);
             const sizeW = getVal(['w', 'size (w)', 'width']);
             const sizeT = getVal(['t', 'size (t)', 'thickness', 'thickness / height', 'height']);
@@ -1596,8 +1602,8 @@ async function fetchFromCloud() {
                     hardware = data.hardware.map((hw, idx) => ({
                         id: hw.id || `hw-cloud-${Date.now()}-${idx}`,
                         boxNo: hw.boxNo || `A${idx+1}`,
-                        category: hw.category || 'Screw',
-                        specification: hw.specification || 'M3',
+                        category: hw.category || '',
+                        specification: hw.specification || '',
                         sizeLD: hw.sizeLD !== undefined ? String(hw.sizeLD) : '',
                         sizeW: hw.sizeW !== undefined ? String(hw.sizeW) : '',
                         sizeT: hw.sizeT !== undefined ? String(hw.sizeT) : '',
