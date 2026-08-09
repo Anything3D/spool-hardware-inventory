@@ -95,11 +95,11 @@
                 </button>
                 <button class="nav-btn" data-tab="hardware">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-                    <span>Hardware Stock</span>
+                    <span>Hardware Array</span>
                 </button>
                 <button class="nav-btn" data-tab="general">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                    <span>General Items</span>
+                    <span>Tools & Hardwares</span>
                 </button>
                 <button class="nav-btn" data-tab="projects">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
@@ -361,11 +361,11 @@
                     </div>
                 </section>
 
-                <!-- 4. GENERAL ITEMS VIEW -->
-                <section id="view-general" class="app-view">
+                <!-- 4. TOOLS & HARDWARES VIEW -->
+                <section id="view-general" class="app-view hidden">
                     <header class="view-header">
                         <div class="header-content">
-                            <h1 class="view-title">General Items</h1>
+                            <h1 class="view-title">Tools & Hardwares</h1>
                             <p class="view-subtitle">Track tools, electronics, adhesives, and general inventory</p>
                         </div>
                         <div class="header-actions">
@@ -920,11 +920,11 @@
         </div>
     </dialog>
 
-    <!-- GENERAL ITEMS ADD/EDIT MODAL -->
+    <!-- TOOLS & HARDWARES ADD/EDIT MODAL -->
     <dialog class="custom-modal" id="modal-general">
         <div class="modal-content glass-panel" style="width: 500px; max-width: 95vw;">
             <div class="modal-header">
-                <h3 id="modal-general-title" style="margin:0; font-family:var(--font-heading);">Add General Item</h3>
+                <h3 id="modal-general-title" style="margin:0; font-family:var(--font-heading);">Add Tool / Hardware</h3>
                 <button type="button" class="btn-icon" id="btn-close-general-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -984,6 +984,18 @@
                     <div class="form-group">
                         <label for="general-min-qty">Min Qty (Alert)</label>
                         <input type="number" id="general-min-qty" class="modal-input" value="1" min="0">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin: 0;">Custom Fields</label>
+                        <button type="button" class="btn-text" id="btn-add-custom-field" style="font-size: 0.85em; padding: 4px 8px;">
+                            + Add Field
+                        </button>
+                    </div>
+                    <div id="general-custom-fields-container">
+                        <!-- Custom fields added dynamically -->
                     </div>
                 </div>
 

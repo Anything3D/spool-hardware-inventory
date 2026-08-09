@@ -5,7 +5,7 @@
 // Global Application State
 let spools = [];
 let hardware = [];
-let generalItems = [];
+let toolsAndHardware = [];
 let projects = [];
 let activeTab = 'dashboard';
 let searchQuery = '';
@@ -115,10 +115,10 @@ const MOCK_HARDWARE = [
     { id: 'hw-13', boxNo: 'A20', category: 'SHCS', specification: 'M6', sizeLD: '40', sizeW: '', sizeT: '', qty: '6', minQty: 10, remarks: 'Alloy steel' }
 ];
 
-const MOCK_GENERAL_ITEMS = [
-    { id: 'gen-1', name: 'Digital Caliper 150mm', category1: 'Tools', category2: 'Measurement', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 2, minQty: 1 },
-    { id: 'gen-2', name: 'Kapton Tape 20mm', category1: 'Adhesives', category2: 'High Temp', storageType: 'compartments', aisle: 'A1', rack: 'R1', shelf: 'S2', bin: 'B04', qty: 5, minQty: 2 },
-    { id: 'gen-3', name: 'Soldering Iron Pinecil', category1: 'Tools', category2: 'Electronics', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 1, minQty: 1 }
+const MOCK_TOOLS_AND_HARDWARE = [
+    { id: 'gen-1', name: 'Digital Caliper 150mm', category1: 'Tools', category2: 'Measurement', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 2, minQty: 1, customFields: [{key: 'Accuracy', value: '0.01mm'}] },
+    { id: 'gen-2', name: 'Kapton Tape 20mm', category1: 'Adhesives', category2: 'High Temp', storageType: 'compartments', aisle: 'A1', rack: 'R1', shelf: 'S2', bin: 'B04', qty: 5, minQty: 2, customFields: [] },
+    { id: 'gen-3', name: 'Soldering Iron Pinecil', category1: 'Tools', category2: 'Electronics', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 1, minQty: 1, customFields: [{key: 'Power', value: '65W'}, {key: 'Input', value: 'USB-C'}] }
 ];
 
 const MOCK_PROJECTS = [
@@ -245,13 +245,13 @@ function switchTab(tabId) {
 function loadDatabase() {
     const savedSpools = localStorage.getItem('nexis_spools');
     const savedHardware = localStorage.getItem('nexis_hardware');
-    const savedGeneral = localStorage.getItem('nexis_general');
+    const savedGeneral = localStorage.getItem('nexis_tools_hardware');
     const savedProjects = localStorage.getItem('nexis_projects');
     const savedTheme = localStorage.getItem('nexis_theme') || 'dark';
 
     spools = savedSpools ? JSON.parse(savedSpools) : [];
     hardware = savedHardware ? JSON.parse(savedHardware) : [];
-    generalItems = savedGeneral ? JSON.parse(savedGeneral) : [];
+    toolsAndHardware = savedGeneral ? JSON.parse(savedGeneral) : [];
     projects = savedProjects ? JSON.parse(savedProjects) : [];
     theme = savedTheme;
 
@@ -366,7 +366,7 @@ function loadDatabase() {
 function saveDatabase() {
     localStorage.setItem('nexis_spools', JSON.stringify(spools));
     localStorage.setItem('nexis_hardware', JSON.stringify(hardware));
-    localStorage.setItem('nexis_general', JSON.stringify(generalItems));
+    localStorage.setItem('nexis_tools_hardware', JSON.stringify(toolsAndHardware));
     localStorage.setItem('nexis_projects', JSON.stringify(projects));
     
     // Update Sync metadata labels
@@ -455,7 +455,7 @@ function renderAll() {
     renderCabinetGrid();
     renderHardware();
     updateGeneralCategoriesFilter();
-    renderGeneralItems();
+    renderToolsAndHardware();
     renderProjects();
     saveDatabase();
 
@@ -490,17 +490,17 @@ function renderDashboardStats() {
         const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return acc + stockInfo.parsedQty;
     }, 0);
-    totalHwQty += generalItems.reduce((acc, item) => acc + (item.qty || 0), 0);
+    totalHwQty += toolsAndHardware.reduce((acc, item) => acc + (item.qty || 0), 0);
     
     dashTotalHardware.innerText = totalHwQty.toLocaleString();
-    dashHardwareTypes.innerText = `${hardware.length + generalItems.length} unique items`;
+    dashHardwareTypes.innerText = `${hardware.length + toolsAndHardware.length} unique items`;
 
     // 4. Low Hardware & General Alert (qty <= minQty or Out of Stock)
     let lowHwCount = hardware.filter(hw => {
         const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return stockInfo.statusClass === 'low' || stockInfo.statusClass === 'out';
     }).length;
-    lowHwCount += generalItems.filter(item => (item.qty || 0) <= (item.minQty || 1)).length;
+    lowHwCount += toolsAndHardware.filter(item => (item.qty || 0) <= (item.minQty || 1)).length;
     
     dashLowHardware.innerText = lowHwCount;
     const hwAlertCard = dashLowHardware.closest('.stat-card');
@@ -1040,8 +1040,11 @@ function deleteHardware(id) {
 // ==========================================================================
 
 function openGeneralModal(item = null) {
+    const customFieldsContainer = document.getElementById('general-custom-fields-container');
+    customFieldsContainer.innerHTML = '';
+    
     if (item) {
-        document.getElementById('modal-general-title').innerText = 'Edit General Item';
+        document.getElementById('modal-general-title').innerText = 'Edit Tool / Hardware';
         document.getElementById('general-id').value = item.id;
         document.getElementById('general-name').value = item.name || '';
         document.getElementById('general-category1').value = item.category1 || '';
@@ -1053,8 +1056,12 @@ function openGeneralModal(item = null) {
         document.getElementById('general-bin').value = item.bin || '';
         document.getElementById('general-qty').value = item.qty || 0;
         document.getElementById('general-min-qty').value = item.minQty || 1;
+        
+        if (item.customFields && Array.isArray(item.customFields)) {
+            item.customFields.forEach(cf => addGeneralCustomField(cf.key, cf.value));
+        }
     } else {
-        document.getElementById('modal-general-title').innerText = 'Add General Item';
+        document.getElementById('modal-general-title').innerText = 'Add Tool / Hardware';
         formGeneral.reset();
         document.getElementById('general-id').value = '';
     }
@@ -1063,19 +1070,42 @@ function openGeneralModal(item = null) {
     modalGeneral.showModal();
 }
 
+function addGeneralCustomField(key = '', value = '') {
+    const container = document.getElementById('general-custom-fields-container');
+    const div = document.createElement('div');
+    div.className = 'form-row custom-field-row';
+    div.style.marginBottom = '8px';
+    div.innerHTML = `
+        <div class="form-group" style="flex: 1; margin: 0;">
+            <input type="text" class="modal-input cf-key" placeholder="Field Name (e.g. Voltage)" value="${key}" required>
+        </div>
+        <div class="form-group" style="flex: 1; margin: 0;">
+            <input type="text" class="modal-input cf-value" placeholder="Value (e.g. 12V)" value="${value}" required>
+        </div>
+        <button type="button" class="btn-icon btn-delete" onclick="this.parentElement.remove()" style="margin-top: 4px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    `;
+    container.appendChild(div);
+}
+
+document.getElementById('btn-add-custom-field').addEventListener('click', () => {
+    addGeneralCustomField();
+});
+
 function editGeneralItem(id) {
-    const item = generalItems.find(i => i.id === id);
+    const item = toolsAndHardware.find(i => i.id === id);
     if (item) {
         openGeneralModal(item);
     }
 }
 
 function deleteGeneralItem(id) {
-    const item = generalItems.find(i => i.id === id);
+    const item = toolsAndHardware.find(i => i.id === id);
     if (!item) return;
     if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
-        generalItems = generalItems.filter(i => i.id !== id);
-        logActivity(`Deleted item "${item.name}" from general list`, 'warning');
+        toolsAndHardware = toolsAndHardware.filter(i => i.id !== id);
+        logActivity(`Deleted item "${item.name}" from tools & hardware list`, 'warning');
         renderAll();
     }
 }
@@ -1112,6 +1142,15 @@ formGeneral.addEventListener('submit', (e) => {
     const id = document.getElementById('general-id').value || 'gen-' + Date.now();
     const storageType = document.getElementById('general-storage-type').value;
 
+    const customFields = [];
+    document.querySelectorAll('.custom-field-row').forEach(row => {
+        const key = row.querySelector('.cf-key').value.trim();
+        const value = row.querySelector('.cf-value').value.trim();
+        if (key && value) {
+            customFields.push({ key, value });
+        }
+    });
+
     const newItem = {
         id: id,
         name: document.getElementById('general-name').value,
@@ -1123,16 +1162,17 @@ formGeneral.addEventListener('submit', (e) => {
         shelf: storageType === 'compartments' ? document.getElementById('general-shelf').value : '',
         bin: storageType === 'compartments' ? document.getElementById('general-bin').value : '',
         qty: parseInt(document.getElementById('general-qty').value, 10),
-        minQty: parseInt(document.getElementById('general-min-qty').value, 10) || 1
+        minQty: parseInt(document.getElementById('general-min-qty').value, 10) || 1,
+        customFields: customFields
     };
 
-    const idx = generalItems.findIndex(i => i.id === id);
+    const idx = toolsAndHardware.findIndex(i => i.id === id);
     if (idx >= 0) {
-        generalItems[idx] = newItem;
-        logActivity(`Updated general item "${newItem.name}"`);
+        toolsAndHardware[idx] = newItem;
+        logActivity(`Updated item "${newItem.name}"`);
     } else {
-        generalItems.push(newItem);
-        logActivity(`Added general item "${newItem.name}"`, 'success');
+        toolsAndHardware.push(newItem);
+        logActivity(`Added item "${newItem.name}"`, 'success');
     }
 
     modalGeneral.close();
@@ -1166,7 +1206,7 @@ function setupFiltersAndSearch() {
     
     const filterGeneral = document.getElementById('filter-general-category');
     if (filterGeneral) {
-        filterGeneral.addEventListener('change', () => { renderGeneralItems(); });
+        filterGeneral.addEventListener('change', () => { renderToolsAndHardware(); });
     }
 }
 
@@ -1750,6 +1790,30 @@ async function fetchFromCloud() {
                     }));
                 }
                 
+                if (data.toolsAndHardware && Array.isArray(data.toolsAndHardware)) {
+                    toolsAndHardware = data.toolsAndHardware.map((item, idx) => {
+                        let parsedCustomFields = [];
+                        try {
+                            parsedCustomFields = typeof item.customFields === 'string' ? JSON.parse(item.customFields) : (item.customFields || []);
+                        } catch(e) { console.error('Failed to parse custom fields for item', item.id); }
+
+                        return {
+                            id: item.id || `gen-cloud-${Date.now()}-${idx}`,
+                            name: item.name || '',
+                            category1: item.category1 || '',
+                            category2: item.category2 || '',
+                            storageType: item.storageType || 'general',
+                            aisle: item.aisle || '',
+                            rack: item.rack || '',
+                            shelf: item.shelf || '',
+                            bin: item.bin || '',
+                            qty: Number(item.qty) || 0,
+                            minQty: Number(item.minQty) || 1,
+                            customFields: parsedCustomFields
+                        };
+                    });
+                }
+                
                 if (data.projects && Array.isArray(data.projects)) {
                     projects = data.projects.map((proj, idx) => {
                         let parsedTasks = [];
@@ -1864,6 +1928,20 @@ async function pushToCloud(isAutoSync = false) {
                 qty: hw.qty,
                 minQty: hw.minQty !== undefined && hw.minQty !== null && hw.minQty !== '' ? hw.minQty : '10',
                 remarks: hw.remarks
+            })),
+            toolsAndHardware: toolsAndHardware.map(item => ({
+                id: item.id,
+                name: item.name,
+                category1: item.category1,
+                category2: item.category2,
+                storageType: item.storageType,
+                aisle: item.aisle,
+                rack: item.rack,
+                shelf: item.shelf,
+                bin: item.bin,
+                qty: Number(item.qty) || 0,
+                minQty: Number(item.minQty) || 1,
+                customFields: JSON.stringify(item.customFields || [])
             })),
             projects: projects.map(proj => ({
                 projectId: proj.projectId,
@@ -2886,8 +2964,8 @@ function deleteProject(id) {
     }
 }
 
-// GENERAL ITEMS RENDERING
-function renderGeneralItems() {
+// TOOLS & HARDWARE RENDERING
+function renderToolsAndHardware() {
     if (!generalTbody) return;
     
     // Get filter states
@@ -2895,7 +2973,7 @@ function renderGeneralItems() {
     const categoryFilter = categoryFilterElement ? categoryFilterElement.value : 'all';
     
     // Filter and search
-    let filtered = generalItems.filter(item => {
+    let filtered = toolsAndHardware.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                               (item.category1 || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                               (item.category2 || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -2908,7 +2986,7 @@ function renderGeneralItems() {
     generalTbody.innerHTML = '';
     
     if (filtered.length === 0) {
-        generalTbody.innerHTML = `<tr><td colspan="6" class="empty-state">No general items found</td></tr>`;
+        generalTbody.innerHTML = `<tr><td colspan="6" class="empty-state">No tools or hardwares found</td></tr>`;
         return;
     }
     
@@ -2939,9 +3017,19 @@ function renderGeneralItems() {
             </div>`;
         }
 
+        let customFieldsHtml = '';
+        if (item.customFields && Array.isArray(item.customFields) && item.customFields.length > 0) {
+            customFieldsHtml = '<div style="margin-top: 6px; font-size: 0.85em; color: var(--text-muted);">';
+            item.customFields.forEach(cf => {
+                customFieldsHtml += `<div style="display: inline-block; margin-right: 12px; margin-bottom: 4px;"><strong>${cf.key}:</strong> ${cf.value}</div>`;
+            });
+            customFieldsHtml += '</div>';
+        }
+
         tr.innerHTML = `
             <td>
                 <div style="font-weight: 500;">${item.name}</div>
+                ${customFieldsHtml}
             </td>
             <td>
                 ${categoriesHtml}
@@ -2975,7 +3063,7 @@ function updateGeneralCategoriesFilter() {
     if (!filterEl) return;
     
     const currentVal = filterEl.value;
-    const categories = [...new Set(generalItems.map(i => i.category1).filter(Boolean))].sort();
+    const categories = [...new Set(toolsAndHardware.map(i => i.category1).filter(Boolean))].sort();
     
     let html = `<option value="all">All Categories</option>`;
     categories.forEach(c => {
