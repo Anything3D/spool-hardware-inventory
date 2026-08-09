@@ -276,7 +276,30 @@ function loadDatabase() {
 
     spools = savedSpools ? JSON.parse(savedSpools) : [];
     hardware = savedHardware ? JSON.parse(savedHardware) : [];
-    toolsAndHardware = savedGeneral ? JSON.parse(savedGeneral) : [];
+    const parsedGeneral = savedGeneral ? JSON.parse(savedGeneral) : [];
+    
+    // Schema Migration: Check if array has the old flat structure (missing sectionName/items)
+    if (parsedGeneral.length > 0 && !parsedGeneral[0].sectionName) {
+        // We have legacy flat items. Group them into a "Legacy Imported" section
+        const legacySection = {
+            id: 'th-sec-legacy',
+            sectionName: 'Legacy Items',
+            columns: ['Name', 'Category 1', 'Storage', 'Qty', 'Min Qty'],
+            items: parsedGeneral.map(oldItem => ({
+                id: oldItem.id || `th-item-legacy-${Math.random()}`,
+                fields: {
+                    'Name': oldItem.name || '',
+                    'Category 1': oldItem.category1 || '',
+                    'Storage': oldItem.storageType || '',
+                    'Qty': (oldItem.qty || 0).toString(),
+                    'Min Qty': (oldItem.minQty || 1).toString()
+                }
+            }))
+        };
+        toolsAndHardware = [legacySection];
+    } else {
+        toolsAndHardware = parsedGeneral;
+    }
     projects = savedProjects ? JSON.parse(savedProjects) : [];
     theme = savedTheme;
 
@@ -477,7 +500,6 @@ function renderAll() {
     renderDashboardStats();
     renderSpools();
     renderCabinetTabs();
-    renderCabinetGrid();
     renderCabinetGrid();
     renderHardware();
     renderToolsAndHardware();
