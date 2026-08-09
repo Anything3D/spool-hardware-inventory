@@ -369,40 +369,19 @@
                             <p class="view-subtitle">Track tools, electronics, adhesives, and general inventory</p>
                         </div>
                         <div class="header-actions">
-                            <button id="btn-add-general" class="primary-btn">
+                            <button id="btn-add-th-section" class="primary-btn" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); margin-right: 8px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                                <span>New Sub-Section</span>
+                            </button>
+                            <button id="btn-add-th-item" class="primary-btn">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                <span>Add Item</span>
+                                <span>Add Product</span>
                             </button>
                         </div>
                     </header>
 
-                    <div class="glass-panel" style="margin-top: 24px;">
-                        <div class="filter-bar">
-                            <div class="filter-group">
-                                <label for="filter-general-category">Category 1</label>
-                                <select id="filter-general-category" class="filter-select">
-                                    <option value="all">All Categories</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="table-container">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item Name & Desc</th>
-                                        <th>Category 1 / 2</th>
-                                        <th>Storage Area / Bin</th>
-                                        <th>Stock</th>
-                                        <th>Min Qty</th>
-                                        <th class="actions-cell">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="general-list-tbody">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <div id="th-sections-container" style="margin-top: 24px;">
+                        <!-- Dynamic sub-sections will be rendered here -->
                     </div>
                 </section>
 
@@ -920,88 +899,72 @@
         </div>
     </dialog>
 
-    <!-- TOOLS & HARDWARES ADD/EDIT MODAL -->
-    <dialog class="custom-modal" id="modal-general">
+    <!-- TOOLS & HARDWARES ADD/EDIT SUB-SECTION MODAL -->
+    <dialog class="custom-modal" id="modal-th-section">
         <div class="modal-content glass-panel" style="width: 500px; max-width: 95vw;">
             <div class="modal-header">
-                <h3 id="modal-general-title" style="margin:0; font-family:var(--font-heading);">Add Tool / Hardware</h3>
-                <button type="button" class="btn-icon" id="btn-close-general-modal">
+                <h3 id="modal-th-section-title" style="margin:0; font-family:var(--font-heading);">Create Sub-Section</h3>
+                <button type="button" class="btn-icon" id="btn-close-th-section-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
             
-            <form id="form-general" class="modal-form">
-                <input type="hidden" id="general-id">
+            <form id="form-th-section" class="modal-form">
+                <input type="hidden" id="th-section-id">
                 
                 <div class="form-group">
-                    <label for="general-name">Item Name & Description *</label>
-                    <input type="text" id="general-name" class="modal-input" required>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="general-category1">Category 1 *</label>
-                        <input type="text" id="general-category1" class="modal-input" required placeholder="e.g. Tools">
-                    </div>
-                    <div class="form-group">
-                        <label for="general-category2">Category 2</label>
-                        <input type="text" id="general-category2" class="modal-input" placeholder="e.g. Hand Tools">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="general-storage-type">Storage Area *</label>
-                    <select id="general-storage-type" class="modal-input" required>
-                        <option value="compartments">Compartments (Bin/Rack)</option>
-                        <option value="general">General Storage / Floor Area</option>
-                    </select>
-                </div>
-
-                <div id="general-compartment-fields" class="form-row" style="transition: all 0.3s ease;">
-                    <div class="form-group">
-                        <label for="general-aisle">Aisle</label>
-                        <input type="text" id="general-aisle" class="modal-input" placeholder="e.g. A1">
-                    </div>
-                    <div class="form-group">
-                        <label for="general-rack">Rack</label>
-                        <input type="text" id="general-rack" class="modal-input" placeholder="e.g. R2">
-                    </div>
-                    <div class="form-group">
-                        <label for="general-shelf">Shelf</label>
-                        <input type="text" id="general-shelf" class="modal-input" placeholder="e.g. S1">
-                    </div>
-                    <div class="form-group">
-                        <label for="general-bin">Bin</label>
-                        <input type="text" id="general-bin" class="modal-input" placeholder="e.g. B12">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="general-qty">Current Qty *</label>
-                        <input type="number" id="general-qty" class="modal-input" required min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="general-min-qty">Min Qty (Alert)</label>
-                        <input type="number" id="general-min-qty" class="modal-input" value="1" min="0">
-                    </div>
+                    <label for="th-section-name">Sub-Section Name *</label>
+                    <input type="text" id="th-section-name" class="modal-input" placeholder="e.g. Screws, Measuring Tools, Adhesives" required>
                 </div>
 
                 <div class="form-group" style="margin-top: 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label style="margin: 0;">Custom Fields</label>
-                        <button type="button" class="btn-text" id="btn-add-custom-field" style="font-size: 0.85em; padding: 4px 8px;">
-                            + Add Field
+                        <label style="margin: 0;">Column Headings *</label>
+                        <button type="button" class="btn-text" id="btn-add-th-column" style="font-size: 0.85em; padding: 4px 8px;">
+                            + Add Column
                         </button>
                     </div>
-                    <div id="general-custom-fields-container">
-                        <!-- Custom fields added dynamically -->
+                    <div id="th-columns-container">
+                        <!-- Column inputs added dynamically -->
                     </div>
+                    <p style="font-size: 0.8em; color: var(--text-muted); margin-top: 8px;">Add the columns you want for this section's table (e.g. Name, Description, Qty, Storage Bin).</p>
                 </div>
 
                 <div class="modal-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
-                    <button type="button" class="btn-text" id="btn-cancel-general">Cancel</button>
-                    <button type="submit" class="primary-btn">Save Item</button>
+                    <button type="button" class="btn-text" id="btn-cancel-th-section">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Section</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- TOOLS & HARDWARES ADD/EDIT PRODUCT MODAL -->
+    <dialog class="custom-modal" id="modal-th-item">
+        <div class="modal-content glass-panel" style="width: 500px; max-width: 95vw;">
+            <div class="modal-header">
+                <h3 id="modal-th-item-title" style="margin:0; font-family:var(--font-heading);">Add Product</h3>
+                <button type="button" class="btn-icon" id="btn-close-th-item-modal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <form id="form-th-item" class="modal-form">
+                <input type="hidden" id="th-item-id">
+                
+                <div class="form-group">
+                    <label for="th-item-section">Target Sub-Section *</label>
+                    <select id="th-item-section" class="modal-input" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div id="th-item-fields-container" style="margin-top: 16px;">
+                    <!-- Dynamically generated fields based on selected section columns -->
+                </div>
+
+                <div class="modal-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" class="btn-text" id="btn-cancel-th-item">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Product</button>
                 </div>
             </form>
         </div>

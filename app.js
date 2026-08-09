@@ -38,23 +38,34 @@ const cloudStatusIcon = document.getElementById('cloud-sync-status-icon');
 // Modals & Forms
 const modalSpool = document.getElementById('modal-spool');
 const modalHardware = document.getElementById('modal-hardware');
-const modalGeneral = document.getElementById('modal-general');
+const modalThSection = document.getElementById('modal-th-section');
+const modalThItem = document.getElementById('modal-th-item');
 const modalProject = document.getElementById('modal-project');
 const formSpool = document.getElementById('form-spool');
 const formHardware = document.getElementById('form-hardware');
-const formGeneral = document.getElementById('form-general');
+const formThSection = document.getElementById('form-th-section');
+const formThItem = document.getElementById('form-th-item');
 const formProject = document.getElementById('form-project');
 
 // Modal Toggles & Controls
 const btnAddSpool = document.getElementById('btn-add-spool');
 const btnAddHardware = document.getElementById('btn-add-hardware');
-const btnAddGeneral = document.getElementById('btn-add-general');
+const btnAddThSection = document.getElementById('btn-add-th-section');
+const btnAddThItem = document.getElementById('btn-add-th-item');
 const btnCloseSpoolModal = document.getElementById('btn-close-spool-modal');
 const btnCloseHardwareModal = document.getElementById('btn-close-hardware-modal');
-const btnCloseGeneralModal = document.getElementById('btn-close-general-modal');
+const btnCloseThSectionModal = document.getElementById('btn-close-th-section-modal');
+const btnCloseThItemModal = document.getElementById('btn-close-th-item-modal');
 const btnCancelSpool = document.getElementById('btn-cancel-spool');
 const btnCancelHardware = document.getElementById('btn-cancel-hardware');
-const btnCancelGeneral = document.getElementById('btn-cancel-general');
+const btnCancelThSection = document.getElementById('btn-cancel-th-section');
+const btnCancelThItem = document.getElementById('btn-cancel-th-item');
+
+// TH specific elements
+const thColumnsContainer = document.getElementById('th-columns-container');
+const btnAddThColumn = document.getElementById('btn-add-th-column');
+const thItemSectionSelect = document.getElementById('th-item-section');
+const thItemFieldsContainer = document.getElementById('th-item-fields-container');
 const spoolColorPicker = document.getElementById('spool-color-picker');
 const spoolHexInput = document.getElementById('spool-hex');
 
@@ -116,9 +127,23 @@ const MOCK_HARDWARE = [
 ];
 
 const MOCK_TOOLS_AND_HARDWARE = [
-    { id: 'gen-1', name: 'Digital Caliper 150mm', category1: 'Tools', category2: 'Measurement', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 2, minQty: 1, customFields: [{key: 'Accuracy', value: '0.01mm'}] },
-    { id: 'gen-2', name: 'Kapton Tape 20mm', category1: 'Adhesives', category2: 'High Temp', storageType: 'compartments', aisle: 'A1', rack: 'R1', shelf: 'S2', bin: 'B04', qty: 5, minQty: 2, customFields: [] },
-    { id: 'gen-3', name: 'Soldering Iron Pinecil', category1: 'Tools', category2: 'Electronics', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 1, minQty: 1, customFields: [{key: 'Power', value: '65W'}, {key: 'Input', value: 'USB-C'}] }
+    {
+        id: 'th-sec-1',
+        sectionName: 'Measuring Tools',
+        columns: ['Name', 'Brand', 'Accuracy', 'Qty', 'Location'],
+        items: [
+            { id: 'th-item-1', fields: { 'Name': 'Digital Caliper 150mm', 'Brand': 'Mitutoyo', 'Accuracy': '0.01mm', 'Qty': '2', 'Location': 'Desk' } }
+        ]
+    },
+    {
+        id: 'th-sec-2',
+        sectionName: 'Adhesives',
+        columns: ['Type', 'Brand', 'Cure Time', 'Qty', 'Bin'],
+        items: [
+            { id: 'th-item-2', fields: { 'Type': 'Super Glue', 'Brand': 'Loctite', 'Cure Time': '10s', 'Qty': '5', 'Bin': 'A1' } },
+            { id: 'th-item-3', fields: { 'Type': 'Kapton Tape 20mm', 'Brand': 'Generic', 'Cure Time': 'N/A', 'Qty': '2', 'Bin': 'A2' } }
+        ]
+    }
 ];
 
 const MOCK_PROJECTS = [
@@ -453,8 +478,8 @@ function renderAll() {
     renderSpools();
     renderCabinetTabs();
     renderCabinetGrid();
+    renderCabinetGrid();
     renderHardware();
-    updateGeneralCategoriesFilter();
     renderToolsAndHardware();
     renderProjects();
     saveDatabase();
@@ -490,17 +515,49 @@ function renderDashboardStats() {
         const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return acc + stockInfo.parsedQty;
     }, 0);
-    totalHwQty += toolsAndHardware.reduce((acc, item) => acc + (item.qty || 0), 0);
+    let thQtySum = 0;
+    let thItemsCount = 0;
+    toolsAndHardware.forEach(section => {
+        thItemsCount += section.items.length;
+        section.items.forEach(item => {
+            const qtyKey = Object.keys(item.fields).find(k => k.toLowerCase().includes('qty') || k.toLowerCase().includes('quantity'));
+            if (qtyKey && !isNaN(parseInt(item.fields[qtyKey], 10))) {
+                thQtySum += parseInt(item.fields[qtyKey], 10);
+            }
+        });
+    });
+    
+    totalHwQty += thQtySum;
     
     dashTotalHardware.innerText = totalHwQty.toLocaleString();
-    dashHardwareTypes.innerText = `${hardware.length + toolsAndHardware.length} unique items`;
+    dashHardwareTypes.innerText = `${hardware.length + thItemsCount} unique items`;
 
     // 4. Low Hardware & General Alert (qty <= minQty or Out of Stock)
     let lowHwCount = hardware.filter(hw => {
         const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return stockInfo.statusClass === 'low' || stockInfo.statusClass === 'out';
     }).length;
-    lowHwCount += toolsAndHardware.filter(item => (item.qty || 0) <= (item.minQty || 1)).length;
+    let lowThCount = 0;
+    toolsAndHardware.forEach(section => {
+        section.items.forEach(item => {
+            const qtyKey = Object.keys(item.fields).find(k => k.toLowerCase().includes('qty') || k.toLowerCase().includes('quantity'));
+            const minQtyKey = Object.keys(item.fields).find(k => k.toLowerCase().includes('min') && (k.toLowerCase().includes('qty') || k.toLowerCase().includes('quantity')));
+            
+            if (qtyKey) {
+                const qtyVal = parseInt(item.fields[qtyKey], 10);
+                if (!isNaN(qtyVal)) {
+                    let minVal = 1; // default minimum
+                    if (minQtyKey && !isNaN(parseInt(item.fields[minQtyKey], 10))) {
+                        minVal = parseInt(item.fields[minQtyKey], 10);
+                    }
+                    if (qtyVal <= minVal) {
+                        lowThCount++;
+                    }
+                }
+            }
+        });
+    });
+    lowHwCount += lowThCount;
     
     dashLowHardware.innerText = lowHwCount;
     const hwAlertCard = dashLowHardware.closest('.stat-card');
@@ -1036,154 +1093,218 @@ function deleteHardware(id) {
 }
 
 // ==========================================================================
-// GENERAL ITEMS LOGIC
+// TOOLS & HARDWARE LOGIC
 // ==========================================================================
 
-function openGeneralModal(item = null) {
-    const customFieldsContainer = document.getElementById('general-custom-fields-container');
-    customFieldsContainer.innerHTML = '';
+// --- Section Logic ---
+function openThSectionModal(sectionId = null) {
+    thColumnsContainer.innerHTML = '';
     
-    if (item) {
-        document.getElementById('modal-general-title').innerText = 'Edit Tool / Hardware';
-        document.getElementById('general-id').value = item.id;
-        document.getElementById('general-name').value = item.name || '';
-        document.getElementById('general-category1').value = item.category1 || '';
-        document.getElementById('general-category2').value = item.category2 || '';
-        document.getElementById('general-storage-type').value = item.storageType || 'general';
-        document.getElementById('general-aisle').value = item.aisle || '';
-        document.getElementById('general-rack').value = item.rack || '';
-        document.getElementById('general-shelf').value = item.shelf || '';
-        document.getElementById('general-bin').value = item.bin || '';
-        document.getElementById('general-qty').value = item.qty || 0;
-        document.getElementById('general-min-qty').value = item.minQty || 1;
-        
-        if (item.customFields && Array.isArray(item.customFields)) {
-            item.customFields.forEach(cf => addGeneralCustomField(cf.key, cf.value));
+    if (sectionId) {
+        const section = toolsAndHardware.find(s => s.id === sectionId);
+        if (section) {
+            document.getElementById('modal-th-section-title').innerText = 'Edit Sub-Section';
+            document.getElementById('th-section-id').value = section.id;
+            document.getElementById('th-section-name').value = section.sectionName;
+            section.columns.forEach(col => addThColumnInput(col));
         }
     } else {
-        document.getElementById('modal-general-title').innerText = 'Add Tool / Hardware';
-        formGeneral.reset();
-        document.getElementById('general-id').value = '';
+        document.getElementById('modal-th-section-title').innerText = 'Create Sub-Section';
+        formThSection.reset();
+        document.getElementById('th-section-id').value = '';
+        addThColumnInput('Name');
+        addThColumnInput('Description');
+        addThColumnInput('Qty');
     }
     
-    toggleGeneralFields();
-    modalGeneral.showModal();
+    modalThSection.showModal();
 }
 
-function addGeneralCustomField(key = '', value = '') {
-    const container = document.getElementById('general-custom-fields-container');
+function addThColumnInput(val = '') {
     const div = document.createElement('div');
-    div.className = 'form-row custom-field-row';
+    div.className = 'form-row th-col-row';
     div.style.marginBottom = '8px';
     div.innerHTML = `
         <div class="form-group" style="flex: 1; margin: 0;">
-            <input type="text" class="modal-input cf-key" placeholder="Field Name (e.g. Voltage)" value="${key}" required>
-        </div>
-        <div class="form-group" style="flex: 1; margin: 0;">
-            <input type="text" class="modal-input cf-value" placeholder="Value (e.g. 12V)" value="${value}" required>
+            <input type="text" class="modal-input col-name-input" placeholder="Column Name (e.g. Qty)" value="${val}" required>
         </div>
         <button type="button" class="btn-icon btn-delete" onclick="this.parentElement.remove()" style="margin-top: 4px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
     `;
-    container.appendChild(div);
+    thColumnsContainer.appendChild(div);
 }
 
-document.getElementById('btn-add-custom-field').addEventListener('click', () => {
-    addGeneralCustomField();
+if (btnAddThColumn) btnAddThColumn.addEventListener('click', () => addThColumnInput());
+
+formThSection.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('th-section-id').value || 'th-sec-' + Date.now();
+    const sectionName = document.getElementById('th-section-name').value.trim();
+    
+    const columns = [];
+    document.querySelectorAll('.col-name-input').forEach(input => {
+        const val = input.value.trim();
+        if (val) columns.push(val);
+    });
+    
+    if (columns.length === 0) {
+        alert("Please add at least one column heading.");
+        return;
+    }
+    
+    const idx = toolsAndHardware.findIndex(s => s.id === id);
+    if (idx >= 0) {
+        toolsAndHardware[idx].sectionName = sectionName;
+        toolsAndHardware[idx].columns = columns;
+        logActivity(`Updated sub-section "${sectionName}"`);
+    } else {
+        toolsAndHardware.push({
+            id: id,
+            sectionName: sectionName,
+            columns: columns,
+            items: []
+        });
+        logActivity(`Created sub-section "${sectionName}"`, 'success');
+    }
+    
+    modalThSection.close();
+    formThSection.reset();
+    renderAll();
 });
 
-function editGeneralItem(id) {
-    const item = toolsAndHardware.find(i => i.id === id);
-    if (item) {
-        openGeneralModal(item);
-    }
-}
-
-function deleteGeneralItem(id) {
-    const item = toolsAndHardware.find(i => i.id === id);
-    if (!item) return;
-    if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
-        toolsAndHardware = toolsAndHardware.filter(i => i.id !== id);
-        logActivity(`Deleted item "${item.name}" from tools & hardware list`, 'warning');
+function deleteThSection(id) {
+    const section = toolsAndHardware.find(s => s.id === id);
+    if (!section) return;
+    if (confirm(`Are you sure you want to delete the "${section.sectionName}" sub-section? All items inside it will also be deleted!`)) {
+        toolsAndHardware = toolsAndHardware.filter(s => s.id !== id);
+        logActivity(`Deleted sub-section "${section.sectionName}"`, 'warning');
         renderAll();
     }
 }
 
-function toggleGeneralFields() {
-    const storageType = document.getElementById('general-storage-type').value;
-    const fields = document.getElementById('general-compartment-fields');
-    if (storageType === 'compartments') {
-        fields.style.opacity = '1';
-        fields.style.pointerEvents = 'auto';
-        fields.style.height = 'auto';
-        fields.style.marginTop = '16px';
-        fields.style.marginBottom = '16px';
-    } else {
-        fields.style.opacity = '0.3';
-        fields.style.pointerEvents = 'none';
-        fields.style.height = '0px';
-        fields.style.marginTop = '0';
-        fields.style.marginBottom = '0';
-        fields.style.overflow = 'hidden';
-        
-        // Clear them
-        document.getElementById('general-aisle').value = '';
-        document.getElementById('general-rack').value = '';
-        document.getElementById('general-shelf').value = '';
-        document.getElementById('general-bin').value = '';
+// --- Item Logic ---
+function openThItemModal(sectionId = null, itemId = null) {
+    if (toolsAndHardware.length === 0) {
+        alert("Please create a Sub-Section first.");
+        return;
     }
-}
 
-document.getElementById('general-storage-type').addEventListener('change', toggleGeneralFields);
-
-formGeneral.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const id = document.getElementById('general-id').value || 'gen-' + Date.now();
-    const storageType = document.getElementById('general-storage-type').value;
-
-    const customFields = [];
-    document.querySelectorAll('.custom-field-row').forEach(row => {
-        const key = row.querySelector('.cf-key').value.trim();
-        const value = row.querySelector('.cf-value').value.trim();
-        if (key && value) {
-            customFields.push({ key, value });
-        }
+    thItemSectionSelect.innerHTML = '';
+    toolsAndHardware.forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec.id;
+        opt.textContent = sec.sectionName;
+        if (sec.id === sectionId) opt.selected = true;
+        thItemSectionSelect.appendChild(opt);
     });
 
-    const newItem = {
-        id: id,
-        name: document.getElementById('general-name').value,
-        category1: document.getElementById('general-category1').value,
-        category2: document.getElementById('general-category2').value,
-        storageType: storageType,
-        aisle: storageType === 'compartments' ? document.getElementById('general-aisle').value : '',
-        rack: storageType === 'compartments' ? document.getElementById('general-rack').value : '',
-        shelf: storageType === 'compartments' ? document.getElementById('general-shelf').value : '',
-        bin: storageType === 'compartments' ? document.getElementById('general-bin').value : '',
-        qty: parseInt(document.getElementById('general-qty').value, 10),
-        minQty: parseInt(document.getElementById('general-min-qty').value, 10) || 1,
-        customFields: customFields
-    };
-
-    const idx = toolsAndHardware.findIndex(i => i.id === id);
-    if (idx >= 0) {
-        toolsAndHardware[idx] = newItem;
-        logActivity(`Updated item "${newItem.name}"`);
+    document.getElementById('th-item-id').value = itemId || '';
+    
+    if (itemId && sectionId) {
+        document.getElementById('modal-th-item-title').innerText = 'Edit Product';
+        const section = toolsAndHardware.find(s => s.id === sectionId);
+        const item = section.items.find(i => i.id === itemId);
+        buildThItemFields(section.columns, item.fields);
     } else {
-        toolsAndHardware.push(newItem);
-        logActivity(`Added item "${newItem.name}"`, 'success');
+        document.getElementById('modal-th-item-title').innerText = 'Add Product';
+        const activeSectionId = thItemSectionSelect.value;
+        const section = toolsAndHardware.find(s => s.id === activeSectionId);
+        buildThItemFields(section.columns, {});
     }
 
-    modalGeneral.close();
-    formGeneral.reset();
+    modalThItem.showModal();
+}
+
+function buildThItemFields(columns, fieldValues) {
+    thItemFieldsContainer.innerHTML = '';
+    columns.forEach(col => {
+        const val = fieldValues[col] || '';
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.style.marginBottom = '12px';
+        
+        let inputType = 'text';
+        if (col.toLowerCase().includes('qty') || col.toLowerCase().includes('quantity')) {
+            inputType = 'number';
+        }
+        
+        div.innerHTML = `
+            <label>${col}</label>
+            <input type="${inputType}" class="modal-input th-item-field-input" data-col="${col}" value="${val}" ${inputType === 'number' ? 'min="0"' : ''}>
+        `;
+        thItemFieldsContainer.appendChild(div);
+    });
+}
+
+if (thItemSectionSelect) {
+    thItemSectionSelect.addEventListener('change', (e) => {
+        const sectionId = e.target.value;
+        const section = toolsAndHardware.find(s => s.id === sectionId);
+        buildThItemFields(section.columns, {});
+    });
+}
+
+formThItem.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const itemId = document.getElementById('th-item-id').value || 'th-item-' + Date.now();
+    const sectionId = thItemSectionSelect.value;
+    
+    const fields = {};
+    document.querySelectorAll('.th-item-field-input').forEach(input => {
+        const col = input.getAttribute('data-col');
+        fields[col] = input.value.trim();
+    });
+    
+    const section = toolsAndHardware.find(s => s.id === sectionId);
+    if (!section) return;
+
+    // Check if moving from another section
+    let movedFromOtherSection = false;
+    if (itemId) {
+        toolsAndHardware.forEach(sec => {
+            if (sec.id !== sectionId) {
+                const idx = sec.items.findIndex(i => i.id === itemId);
+                if (idx >= 0) {
+                    sec.items.splice(idx, 1);
+                    movedFromOtherSection = true;
+                }
+            }
+        });
+    }
+
+    const idx = section.items.findIndex(i => i.id === itemId);
+    if (idx >= 0) {
+        section.items[idx].fields = fields;
+        logActivity(`Updated product in "${section.sectionName}"`);
+    } else {
+        section.items.push({ id: itemId, fields: fields });
+        logActivity(`Added product to "${section.sectionName}"`, 'success');
+    }
+
+    modalThItem.close();
+    formThItem.reset();
     renderAll();
 });
 
-if (btnAddGeneral) btnAddGeneral.addEventListener('click', () => openGeneralModal());
-if (btnCloseGeneralModal) btnCloseGeneralModal.addEventListener('click', () => { modalGeneral.close(); formGeneral.reset(); });
-if (btnCancelGeneral) btnCancelGeneral.addEventListener('click', () => { modalGeneral.close(); formGeneral.reset(); });
+function deleteThItem(sectionId, itemId) {
+    const section = toolsAndHardware.find(s => s.id === sectionId);
+    if (!section) return;
+    if (confirm(`Are you sure you want to delete this product?`)) {
+        section.items = section.items.filter(i => i.id !== itemId);
+        logActivity(`Deleted product from "${section.sectionName}"`, 'warning');
+        renderAll();
+    }
+}
 
+// Modal Toggle Event Listeners
+if (btnAddThSection) btnAddThSection.addEventListener('click', () => openThSectionModal());
+if (btnAddThItem) btnAddThItem.addEventListener('click', () => openThItemModal());
+if (btnCloseThSectionModal) btnCloseThSectionModal.addEventListener('click', () => modalThSection.close());
+if (btnCancelThSection) btnCancelThSection.addEventListener('click', () => modalThSection.close());
+if (btnCloseThItemModal) btnCloseThItemModal.addEventListener('click', () => modalThItem.close());
+if (btnCancelThItem) btnCancelThItem.addEventListener('click', () => modalThItem.close());
+;
 
 // ==========================================================================
 // SEARCH & FILTERS CONTROLLERS
@@ -1791,25 +1912,15 @@ async function fetchFromCloud() {
                 }
                 
                 if (data.toolsAndHardware && Array.isArray(data.toolsAndHardware)) {
-                    toolsAndHardware = data.toolsAndHardware.map((item, idx) => {
-                        let parsedCustomFields = [];
-                        try {
-                            parsedCustomFields = typeof item.customFields === 'string' ? JSON.parse(item.customFields) : (item.customFields || []);
-                        } catch(e) { console.error('Failed to parse custom fields for item', item.id); }
-
+                    toolsAndHardware = data.toolsAndHardware.map((section, idx) => {
                         return {
-                            id: item.id || `gen-cloud-${Date.now()}-${idx}`,
-                            name: item.name || '',
-                            category1: item.category1 || '',
-                            category2: item.category2 || '',
-                            storageType: item.storageType || 'general',
-                            aisle: item.aisle || '',
-                            rack: item.rack || '',
-                            shelf: item.shelf || '',
-                            bin: item.bin || '',
-                            qty: Number(item.qty) || 0,
-                            minQty: Number(item.minQty) || 1,
-                            customFields: parsedCustomFields
+                            id: section.id || `th-sec-${Date.now()}-${idx}`,
+                            sectionName: section.sectionName || 'Unnamed Section',
+                            columns: Array.isArray(section.columns) ? section.columns : [],
+                            items: Array.isArray(section.items) ? section.items.map(item => ({
+                                id: item.id || `th-item-${Date.now()}-${Math.random()}`,
+                                fields: item.fields || {}
+                            })) : []
                         };
                     });
                 }
@@ -1929,19 +2040,11 @@ async function pushToCloud(isAutoSync = false) {
                 minQty: hw.minQty !== undefined && hw.minQty !== null && hw.minQty !== '' ? hw.minQty : '10',
                 remarks: hw.remarks
             })),
-            toolsAndHardware: toolsAndHardware.map(item => ({
-                id: item.id,
-                name: item.name,
-                category1: item.category1,
-                category2: item.category2,
-                storageType: item.storageType,
-                aisle: item.aisle,
-                rack: item.rack,
-                shelf: item.shelf,
-                bin: item.bin,
-                qty: Number(item.qty) || 0,
-                minQty: Number(item.minQty) || 1,
-                customFields: JSON.stringify(item.customFields || [])
+            toolsAndHardware: toolsAndHardware.map(section => ({
+                id: section.id,
+                sectionName: section.sectionName,
+                columns: section.columns,
+                items: section.items
             })),
             projects: projects.map(proj => ({
                 projectId: proj.projectId,
@@ -2966,114 +3069,76 @@ function deleteProject(id) {
 
 // TOOLS & HARDWARE RENDERING
 function renderToolsAndHardware() {
-    if (!generalTbody) return;
+    const container = document.getElementById('th-sections-container');
+    if (!container) return;
     
-    // Get filter states
-    const categoryFilterElement = document.getElementById('filter-general-category');
-    const categoryFilter = categoryFilterElement ? categoryFilterElement.value : 'all';
+    container.innerHTML = '';
     
-    // Filter and search
-    let filtered = toolsAndHardware.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              (item.category1 || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              (item.category2 || '').toLowerCase().includes(searchQuery.toLowerCase());
-                              
-        const matchesCategory = categoryFilter === 'all' || item.category1 === categoryFilter;
-        
-        return matchesSearch && matchesCategory;
-    });
-
-    generalTbody.innerHTML = '';
-    
-    if (filtered.length === 0) {
-        generalTbody.innerHTML = `<tr><td colspan="6" class="empty-state">No tools or hardwares found</td></tr>`;
+    if (toolsAndHardware.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-muted); background: var(--surface-1); border-radius: 8px;">No Sub-Sections created yet. Click "New Sub-Section" to get started.</div>`;
         return;
     }
     
-    filtered.forEach(item => {
-        const tr = document.createElement('tr');
+    toolsAndHardware.forEach(section => {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'glass-panel';
+        sectionDiv.style.marginBottom = '24px';
         
-        // Low stock highlighting
-        if (item.qty <= 0) {
-            tr.classList.add('low-stock-danger');
-        } else if (item.qty <= (item.minQty || 1)) {
-            tr.classList.add('low-stock-warning');
-        }
+        let thHtml = '';
+        section.columns.forEach(col => {
+            thHtml += `<th>${col}</th>`;
+        });
+        thHtml += `<th class="actions-cell" style="width: 80px;">Actions</th>`;
         
-        let categoriesHtml = `<span class="tag tag-primary">${item.category1}</span>`;
-        if (item.category2) {
-            categoriesHtml += ` <span class="tag tag-secondary">${item.category2}</span>`;
-        }
-
-        let locationHtml = '';
-        if (item.storageType === 'general') {
-            locationHtml = `<span style="color: var(--text-muted); font-size: 0.85em;">Floor/General</span>`;
+        let tbodyHtml = '';
+        if (section.items.length === 0) {
+            tbodyHtml = `<tr><td colspan="${section.columns.length + 1}" class="empty-state">No products in this section</td></tr>`;
         } else {
-            locationHtml = `<div class="tag-group" style="display:inline-flex; gap: 4px;">
-                ${item.aisle ? `<span class="tag tag-outline">A:${item.aisle}</span>` : ''}
-                ${item.rack ? `<span class="tag tag-outline">R:${item.rack}</span>` : ''}
-                ${item.shelf ? `<span class="tag tag-outline">S:${item.shelf}</span>` : ''}
-                ${item.bin ? `<span class="tag tag-outline">B:${item.bin}</span>` : ''}
-            </div>`;
-        }
-
-        let customFieldsHtml = '';
-        if (item.customFields && Array.isArray(item.customFields) && item.customFields.length > 0) {
-            customFieldsHtml = '<div style="margin-top: 6px; font-size: 0.85em; color: var(--text-muted);">';
-            item.customFields.forEach(cf => {
-                customFieldsHtml += `<div style="display: inline-block; margin-right: 12px; margin-bottom: 4px;"><strong>${cf.key}:</strong> ${cf.value}</div>`;
+            section.items.forEach(item => {
+                let tdHtml = '';
+                section.columns.forEach(col => {
+                    // Quick check to bold Qty columns
+                    const isQty = col.toLowerCase().includes('qty') || col.toLowerCase().includes('quantity');
+                    tdHtml += `<td ${isQty ? 'style="font-weight:600;"' : ''}>${item.fields[col] || '-'}</td>`;
+                });
+                
+                tbodyHtml += `
+                    <tr>
+                        ${tdHtml}
+                        <td class="actions-cell">
+                            <div class="action-buttons">
+                                <button class="btn-icon btn-edit" onclick="openThItemModal('${section.id}', '${item.id}')" title="Edit Product">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                <button class="btn-icon btn-delete" onclick="deleteThItem('${section.id}', '${item.id}')" title="Delete Product">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             });
-            customFieldsHtml += '</div>';
         }
-
-        tr.innerHTML = `
-            <td>
-                <div style="font-weight: 500;">${item.name}</div>
-                ${customFieldsHtml}
-            </td>
-            <td>
-                ${categoriesHtml}
-            </td>
-            <td>
-                ${locationHtml}
-            </td>
-            <td style="font-weight: 600; color: ${item.qty <= 0 ? 'var(--danger)' : item.qty <= (item.minQty || 1) ? 'var(--warning)' : 'inherit'}">
-                ${item.qty}
-            </td>
-            <td style="color: var(--text-muted);">
-                ${item.minQty || 0}
-            </td>
-            <td class="actions-cell">
-                <div class="action-buttons">
-                    <button class="btn-icon btn-edit" onclick="editGeneralItem('${item.id}')" title="Edit Item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    </button>
-                    <button class="btn-icon btn-delete" onclick="deleteGeneralItem('${item.id}')" title="Delete Item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                </div>
-            </td>
+        
+        sectionDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px;">
+                <h3 style="margin: 0; font-family: var(--font-heading); color: var(--primary-light); font-size: 1.2rem;">${section.sectionName}</h3>
+                <button class="btn-text" onclick="deleteThSection('${section.id}')" style="color: var(--danger); font-size: 0.85em; padding: 4px 8px;">Delete Section</button>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>${thHtml}</tr>
+                    </thead>
+                    <tbody>
+                        ${tbodyHtml}
+                    </tbody>
+                </table>
+            </div>
         `;
-        generalTbody.appendChild(tr);
+        
+        container.appendChild(sectionDiv);
     });
-}
-
-function updateGeneralCategoriesFilter() {
-    const filterEl = document.getElementById('filter-general-category');
-    if (!filterEl) return;
-    
-    const currentVal = filterEl.value;
-    const categories = [...new Set(toolsAndHardware.map(i => i.category1).filter(Boolean))].sort();
-    
-    let html = `<option value="all">All Categories</option>`;
-    categories.forEach(c => {
-        html += `<option value="${c}">${c}</option>`;
-    });
-    
-    filterEl.innerHTML = html;
-    if (categories.includes(currentVal)) {
-        filterEl.value = currentVal;
-    }
 }
 
 // CORE PROJECT RENDERING BOARD
