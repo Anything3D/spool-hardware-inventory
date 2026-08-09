@@ -5,6 +5,7 @@
 // Global Application State
 let spools = [];
 let hardware = [];
+let generalItems = [];
 let projects = [];
 let activeTab = 'dashboard';
 let searchQuery = '';
@@ -37,18 +38,23 @@ const cloudStatusIcon = document.getElementById('cloud-sync-status-icon');
 // Modals & Forms
 const modalSpool = document.getElementById('modal-spool');
 const modalHardware = document.getElementById('modal-hardware');
+const modalGeneral = document.getElementById('modal-general');
 const modalProject = document.getElementById('modal-project');
 const formSpool = document.getElementById('form-spool');
 const formHardware = document.getElementById('form-hardware');
+const formGeneral = document.getElementById('form-general');
 const formProject = document.getElementById('form-project');
 
 // Modal Toggles & Controls
 const btnAddSpool = document.getElementById('btn-add-spool');
 const btnAddHardware = document.getElementById('btn-add-hardware');
+const btnAddGeneral = document.getElementById('btn-add-general');
 const btnCloseSpoolModal = document.getElementById('btn-close-spool-modal');
 const btnCloseHardwareModal = document.getElementById('btn-close-hardware-modal');
+const btnCloseGeneralModal = document.getElementById('btn-close-general-modal');
 const btnCancelSpool = document.getElementById('btn-cancel-spool');
 const btnCancelHardware = document.getElementById('btn-cancel-hardware');
+const btnCancelGeneral = document.getElementById('btn-cancel-general');
 const spoolColorPicker = document.getElementById('spool-color-picker');
 const spoolHexInput = document.getElementById('spool-hex');
 
@@ -70,6 +76,7 @@ const btnLoadMockData = document.getElementById('btn-load-mock-data');
 // Spools & Hardware list targets
 const spoolsContainer = document.getElementById('spools-list-container');
 const hardwareTbody = document.getElementById('hardware-list-tbody');
+const generalTbody = document.getElementById('general-list-tbody');
 
 // Stats Targets
 const dashTotalWeight = document.getElementById('dash-total-weight');
@@ -106,6 +113,12 @@ const MOCK_HARDWARE = [
     { id: 'hw-11', boxNo: 'A11', category: 'Heat shrink tube', specification: 'Heat shrink tube', sizeLD: '', sizeW: '', sizeT: '', qty: '', minQty: 10, remarks: 'Small' },
     { id: 'hw-12', boxNo: 'A12', category: 'Heat shrink tube', specification: 'Heat shrink tube', sizeLD: '', sizeW: '', sizeT: '', qty: '10', minQty: 10, remarks: 'Small' },
     { id: 'hw-13', boxNo: 'A20', category: 'SHCS', specification: 'M6', sizeLD: '40', sizeW: '', sizeT: '', qty: '6', minQty: 10, remarks: 'Alloy steel' }
+];
+
+const MOCK_GENERAL_ITEMS = [
+    { id: 'gen-1', name: 'Digital Caliper 150mm', category1: 'Tools', category2: 'Measurement', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 2, minQty: 1 },
+    { id: 'gen-2', name: 'Kapton Tape 20mm', category1: 'Adhesives', category2: 'High Temp', storageType: 'compartments', aisle: 'A1', rack: 'R1', shelf: 'S2', bin: 'B04', qty: 5, minQty: 2 },
+    { id: 'gen-3', name: 'Soldering Iron Pinecil', category1: 'Tools', category2: 'Electronics', storageType: 'general', aisle: '', rack: '', shelf: '', bin: '', qty: 1, minQty: 1 }
 ];
 
 const MOCK_PROJECTS = [
@@ -232,11 +245,13 @@ function switchTab(tabId) {
 function loadDatabase() {
     const savedSpools = localStorage.getItem('nexis_spools');
     const savedHardware = localStorage.getItem('nexis_hardware');
+    const savedGeneral = localStorage.getItem('nexis_general');
     const savedProjects = localStorage.getItem('nexis_projects');
     const savedTheme = localStorage.getItem('nexis_theme') || 'dark';
 
     spools = savedSpools ? JSON.parse(savedSpools) : [];
     hardware = savedHardware ? JSON.parse(savedHardware) : [];
+    generalItems = savedGeneral ? JSON.parse(savedGeneral) : [];
     projects = savedProjects ? JSON.parse(savedProjects) : [];
     theme = savedTheme;
 
@@ -351,6 +366,7 @@ function loadDatabase() {
 function saveDatabase() {
     localStorage.setItem('nexis_spools', JSON.stringify(spools));
     localStorage.setItem('nexis_hardware', JSON.stringify(hardware));
+    localStorage.setItem('nexis_general', JSON.stringify(generalItems));
     localStorage.setItem('nexis_projects', JSON.stringify(projects));
     
     // Update Sync metadata labels
@@ -438,6 +454,8 @@ function renderAll() {
     renderCabinetTabs();
     renderCabinetGrid();
     renderHardware();
+    updateGeneralCategoriesFilter();
+    renderGeneralItems();
     renderProjects();
     saveDatabase();
 
@@ -467,19 +485,23 @@ function renderDashboardStats() {
         alertCard.classList.remove('amber-glow');
     }
 
-    // 3. Hardware Pieces Total count
-    const totalHwQty = hardware.reduce((acc, hw) => {
+    // 3. Hardware & General Pieces Total count
+    let totalHwQty = hardware.reduce((acc, hw) => {
         const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return acc + stockInfo.parsedQty;
     }, 0);
+    totalHwQty += generalItems.reduce((acc, item) => acc + (item.qty || 0), 0);
+    
     dashTotalHardware.innerText = totalHwQty.toLocaleString();
-    dashHardwareTypes.innerText = `${hardware.length} unique fastener types`;
+    dashHardwareTypes.innerText = `${hardware.length + generalItems.length} unique items`;
 
-    // 4. Low Hardware Alert (qty <= minQty or Out of Stock)
-    const lowHwCount = hardware.filter(hw => {
+    // 4. Low Hardware & General Alert (qty <= minQty or Out of Stock)
+    let lowHwCount = hardware.filter(hw => {
         const stockInfo = getStockLevelInfo(hw.qty, hw.minQty);
         return stockInfo.statusClass === 'low' || stockInfo.statusClass === 'out';
     }).length;
+    lowHwCount += generalItems.filter(item => (item.qty || 0) <= (item.minQty || 1)).length;
+    
     dashLowHardware.innerText = lowHwCount;
     const hwAlertCard = dashLowHardware.closest('.stat-card');
     if (lowHwCount > 0) {
@@ -1014,6 +1036,116 @@ function deleteHardware(id) {
 }
 
 // ==========================================================================
+// GENERAL ITEMS LOGIC
+// ==========================================================================
+
+function openGeneralModal(item = null) {
+    if (item) {
+        document.getElementById('modal-general-title').innerText = 'Edit General Item';
+        document.getElementById('general-id').value = item.id;
+        document.getElementById('general-name').value = item.name || '';
+        document.getElementById('general-category1').value = item.category1 || '';
+        document.getElementById('general-category2').value = item.category2 || '';
+        document.getElementById('general-storage-type').value = item.storageType || 'general';
+        document.getElementById('general-aisle').value = item.aisle || '';
+        document.getElementById('general-rack').value = item.rack || '';
+        document.getElementById('general-shelf').value = item.shelf || '';
+        document.getElementById('general-bin').value = item.bin || '';
+        document.getElementById('general-qty').value = item.qty || 0;
+        document.getElementById('general-min-qty').value = item.minQty || 1;
+    } else {
+        document.getElementById('modal-general-title').innerText = 'Add General Item';
+        formGeneral.reset();
+        document.getElementById('general-id').value = '';
+    }
+    
+    toggleGeneralFields();
+    modalGeneral.showModal();
+}
+
+function editGeneralItem(id) {
+    const item = generalItems.find(i => i.id === id);
+    if (item) {
+        openGeneralModal(item);
+    }
+}
+
+function deleteGeneralItem(id) {
+    const item = generalItems.find(i => i.id === id);
+    if (!item) return;
+    if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
+        generalItems = generalItems.filter(i => i.id !== id);
+        logActivity(`Deleted item "${item.name}" from general list`, 'warning');
+        renderAll();
+    }
+}
+
+function toggleGeneralFields() {
+    const storageType = document.getElementById('general-storage-type').value;
+    const fields = document.getElementById('general-compartment-fields');
+    if (storageType === 'compartments') {
+        fields.style.opacity = '1';
+        fields.style.pointerEvents = 'auto';
+        fields.style.height = 'auto';
+        fields.style.marginTop = '16px';
+        fields.style.marginBottom = '16px';
+    } else {
+        fields.style.opacity = '0.3';
+        fields.style.pointerEvents = 'none';
+        fields.style.height = '0px';
+        fields.style.marginTop = '0';
+        fields.style.marginBottom = '0';
+        fields.style.overflow = 'hidden';
+        
+        // Clear them
+        document.getElementById('general-aisle').value = '';
+        document.getElementById('general-rack').value = '';
+        document.getElementById('general-shelf').value = '';
+        document.getElementById('general-bin').value = '';
+    }
+}
+
+document.getElementById('general-storage-type').addEventListener('change', toggleGeneralFields);
+
+formGeneral.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('general-id').value || 'gen-' + Date.now();
+    const storageType = document.getElementById('general-storage-type').value;
+
+    const newItem = {
+        id: id,
+        name: document.getElementById('general-name').value,
+        category1: document.getElementById('general-category1').value,
+        category2: document.getElementById('general-category2').value,
+        storageType: storageType,
+        aisle: storageType === 'compartments' ? document.getElementById('general-aisle').value : '',
+        rack: storageType === 'compartments' ? document.getElementById('general-rack').value : '',
+        shelf: storageType === 'compartments' ? document.getElementById('general-shelf').value : '',
+        bin: storageType === 'compartments' ? document.getElementById('general-bin').value : '',
+        qty: parseInt(document.getElementById('general-qty').value, 10),
+        minQty: parseInt(document.getElementById('general-min-qty').value, 10) || 1
+    };
+
+    const idx = generalItems.findIndex(i => i.id === id);
+    if (idx >= 0) {
+        generalItems[idx] = newItem;
+        logActivity(`Updated general item "${newItem.name}"`);
+    } else {
+        generalItems.push(newItem);
+        logActivity(`Added general item "${newItem.name}"`, 'success');
+    }
+
+    modalGeneral.close();
+    formGeneral.reset();
+    renderAll();
+});
+
+if (btnAddGeneral) btnAddGeneral.addEventListener('click', () => openGeneralModal());
+if (btnCloseGeneralModal) btnCloseGeneralModal.addEventListener('click', () => { modalGeneral.close(); formGeneral.reset(); });
+if (btnCancelGeneral) btnCancelGeneral.addEventListener('click', () => { modalGeneral.close(); formGeneral.reset(); });
+
+
+// ==========================================================================
 // SEARCH & FILTERS CONTROLLERS
 // ==========================================================================
 
@@ -1031,6 +1163,11 @@ function setupFiltersAndSearch() {
     filterSpoolStatus.addEventListener('change', () => { renderSpools(); });
     filterHardwareType.addEventListener('change', () => { renderHardware(); });
     filterHardwareSize.addEventListener('change', () => { renderHardware(); });
+    
+    const filterGeneral = document.getElementById('filter-general-category');
+    if (filterGeneral) {
+        filterGeneral.addEventListener('change', () => { renderGeneralItems(); });
+    }
 }
 
 // ==========================================================================
@@ -2746,6 +2883,108 @@ function deleteProject(id) {
         projects = projects.filter(proj => proj.projectId !== id);
         logActivity(`Deleted project "${label}" from plan`, 'warning');
         renderAll();
+    }
+}
+
+// GENERAL ITEMS RENDERING
+function renderGeneralItems() {
+    if (!generalTbody) return;
+    
+    // Get filter states
+    const categoryFilterElement = document.getElementById('filter-general-category');
+    const categoryFilter = categoryFilterElement ? categoryFilterElement.value : 'all';
+    
+    // Filter and search
+    let filtered = generalItems.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              (item.category1 || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              (item.category2 || '').toLowerCase().includes(searchQuery.toLowerCase());
+                              
+        const matchesCategory = categoryFilter === 'all' || item.category1 === categoryFilter;
+        
+        return matchesSearch && matchesCategory;
+    });
+
+    generalTbody.innerHTML = '';
+    
+    if (filtered.length === 0) {
+        generalTbody.innerHTML = `<tr><td colspan="6" class="empty-state">No general items found</td></tr>`;
+        return;
+    }
+    
+    filtered.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        // Low stock highlighting
+        if (item.qty <= 0) {
+            tr.classList.add('low-stock-danger');
+        } else if (item.qty <= (item.minQty || 1)) {
+            tr.classList.add('low-stock-warning');
+        }
+        
+        let categoriesHtml = `<span class="tag tag-primary">${item.category1}</span>`;
+        if (item.category2) {
+            categoriesHtml += ` <span class="tag tag-secondary">${item.category2}</span>`;
+        }
+
+        let locationHtml = '';
+        if (item.storageType === 'general') {
+            locationHtml = `<span style="color: var(--text-muted); font-size: 0.85em;">Floor/General</span>`;
+        } else {
+            locationHtml = `<div class="tag-group" style="display:inline-flex; gap: 4px;">
+                ${item.aisle ? `<span class="tag tag-outline">A:${item.aisle}</span>` : ''}
+                ${item.rack ? `<span class="tag tag-outline">R:${item.rack}</span>` : ''}
+                ${item.shelf ? `<span class="tag tag-outline">S:${item.shelf}</span>` : ''}
+                ${item.bin ? `<span class="tag tag-outline">B:${item.bin}</span>` : ''}
+            </div>`;
+        }
+
+        tr.innerHTML = `
+            <td>
+                <div style="font-weight: 500;">${item.name}</div>
+            </td>
+            <td>
+                ${categoriesHtml}
+            </td>
+            <td>
+                ${locationHtml}
+            </td>
+            <td style="font-weight: 600; color: ${item.qty <= 0 ? 'var(--danger)' : item.qty <= (item.minQty || 1) ? 'var(--warning)' : 'inherit'}">
+                ${item.qty}
+            </td>
+            <td style="color: var(--text-muted);">
+                ${item.minQty || 0}
+            </td>
+            <td class="actions-cell">
+                <div class="action-buttons">
+                    <button class="btn-icon btn-edit" onclick="editGeneralItem('${item.id}')" title="Edit Item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                    <button class="btn-icon btn-delete" onclick="deleteGeneralItem('${item.id}')" title="Delete Item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </div>
+            </td>
+        `;
+        generalTbody.appendChild(tr);
+    });
+}
+
+function updateGeneralCategoriesFilter() {
+    const filterEl = document.getElementById('filter-general-category');
+    if (!filterEl) return;
+    
+    const currentVal = filterEl.value;
+    const categories = [...new Set(generalItems.map(i => i.category1).filter(Boolean))].sort();
+    
+    let html = `<option value="all">All Categories</option>`;
+    categories.forEach(c => {
+        html += `<option value="${c}">${c}</option>`;
+    });
+    
+    filterEl.innerHTML = html;
+    if (categories.includes(currentVal)) {
+        filterEl.value = currentVal;
     }
 }
 

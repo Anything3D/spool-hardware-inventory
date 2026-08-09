@@ -97,6 +97,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
                     <span>Hardware Stock</span>
                 </button>
+                <button class="nav-btn" data-tab="general">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                    <span>General Items</span>
+                </button>
                 <button class="nav-btn" data-tab="projects">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
                     <span>Project Planner</span>
@@ -357,7 +361,52 @@
                     </div>
                 </section>
 
-                <!-- 4. PROJECT PLANNER VIEW -->
+                <!-- 4. GENERAL ITEMS VIEW -->
+                <section id="view-general" class="app-view">
+                    <header class="view-header">
+                        <div class="header-content">
+                            <h1 class="view-title">General Items</h1>
+                            <p class="view-subtitle">Track tools, electronics, adhesives, and general inventory</p>
+                        </div>
+                        <div class="header-actions">
+                            <button id="btn-add-general" class="primary-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>Add Item</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="glass-panel" style="margin-top: 24px;">
+                        <div class="filter-bar">
+                            <div class="filter-group">
+                                <label for="filter-general-category">Category 1</label>
+                                <select id="filter-general-category" class="filter-select">
+                                    <option value="all">All Categories</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item Name & Desc</th>
+                                        <th>Category 1 / 2</th>
+                                        <th>Storage Area / Bin</th>
+                                        <th>Stock</th>
+                                        <th>Min Qty</th>
+                                        <th class="actions-cell">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="general-list-tbody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. PROJECT PLANNER VIEW -->
                 <section id="view-projects" class="app-view">
                     <div class="view-header-row">
                         <div class="view-header">
@@ -866,6 +915,81 @@
                 <div class="modal-footer">
                     <button type="button" class="secondary-btn" id="btn-cancel-hardware">Cancel</button>
                     <button type="submit" class="primary-btn" id="btn-save-hardware">Save Hardware</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <!-- GENERAL ITEMS ADD/EDIT MODAL -->
+    <dialog class="custom-modal" id="modal-general">
+        <div class="modal-content glass-panel" style="width: 500px; max-width: 95vw;">
+            <div class="modal-header">
+                <h3 id="modal-general-title" style="margin:0; font-family:var(--font-heading);">Add General Item</h3>
+                <button type="button" class="btn-icon" id="btn-close-general-modal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <form id="form-general" class="modal-form">
+                <input type="hidden" id="general-id">
+                
+                <div class="form-group">
+                    <label for="general-name">Item Name & Description *</label>
+                    <input type="text" id="general-name" class="modal-input" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="general-category1">Category 1 *</label>
+                        <input type="text" id="general-category1" class="modal-input" required placeholder="e.g. Tools">
+                    </div>
+                    <div class="form-group">
+                        <label for="general-category2">Category 2</label>
+                        <input type="text" id="general-category2" class="modal-input" placeholder="e.g. Hand Tools">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="general-storage-type">Storage Area *</label>
+                    <select id="general-storage-type" class="modal-input" required>
+                        <option value="compartments">Compartments (Bin/Rack)</option>
+                        <option value="general">General Storage / Floor Area</option>
+                    </select>
+                </div>
+
+                <div id="general-compartment-fields" class="form-row" style="transition: all 0.3s ease;">
+                    <div class="form-group">
+                        <label for="general-aisle">Aisle</label>
+                        <input type="text" id="general-aisle" class="modal-input" placeholder="e.g. A1">
+                    </div>
+                    <div class="form-group">
+                        <label for="general-rack">Rack</label>
+                        <input type="text" id="general-rack" class="modal-input" placeholder="e.g. R2">
+                    </div>
+                    <div class="form-group">
+                        <label for="general-shelf">Shelf</label>
+                        <input type="text" id="general-shelf" class="modal-input" placeholder="e.g. S1">
+                    </div>
+                    <div class="form-group">
+                        <label for="general-bin">Bin</label>
+                        <input type="text" id="general-bin" class="modal-input" placeholder="e.g. B12">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="general-qty">Current Qty *</label>
+                        <input type="number" id="general-qty" class="modal-input" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="general-min-qty">Min Qty (Alert)</label>
+                        <input type="number" id="general-min-qty" class="modal-input" value="1" min="0">
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" class="btn-text" id="btn-cancel-general">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Item</button>
                 </div>
             </form>
         </div>
