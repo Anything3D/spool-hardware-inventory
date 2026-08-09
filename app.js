@@ -3103,14 +3103,14 @@ function renderToolsAndHardware() {
     
     toolsAndHardware.forEach(section => {
         const sectionDiv = document.createElement('div');
-        sectionDiv.className = 'glass-panel';
-        sectionDiv.style.marginBottom = '24px';
+        sectionDiv.className = 'table-card glass-panel';
+        sectionDiv.style.marginBottom = '32px';
         
         let thHtml = '';
         section.columns.forEach(col => {
             thHtml += `<th>${col}</th>`;
         });
-        thHtml += `<th class="actions-cell" style="width: 80px;">Actions</th>`;
+        thHtml += `<th class="text-right" style="width: 120px;">Actions</th>`;
         
         let tbodyHtml = '';
         if (section.items.length === 0) {
@@ -3121,13 +3121,13 @@ function renderToolsAndHardware() {
                 section.columns.forEach(col => {
                     // Quick check to bold Qty columns
                     const isQty = col.toLowerCase().includes('qty') || col.toLowerCase().includes('quantity');
-                    tdHtml += `<td ${isQty ? 'style="font-weight:600;"' : ''}>${item.fields[col] || '-'}</td>`;
+                    tdHtml += `<td ${isQty ? 'style="font-weight:600; color: var(--primary-light);"' : ''}>${item.fields[col] || '-'}</td>`;
                 });
                 
                 tbodyHtml += `
                     <tr>
                         ${tdHtml}
-                        <td class="actions-cell">
+                        <td class="text-right">
                             <div class="action-buttons">
                                 <button class="btn-icon btn-edit" onclick="openThItemModal('${section.id}', '${item.id}')" title="Edit Product">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -3143,12 +3143,21 @@ function renderToolsAndHardware() {
         }
         
         sectionDiv.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px;">
-                <h3 style="margin: 0; font-family: var(--font-heading); color: var(--primary-light); font-size: 1.2rem;">${section.sectionName}</h3>
-                <button class="btn-text" onclick="deleteThSection('${section.id}')" style="color: var(--danger); font-size: 0.85em; padding: 4px 8px;">Delete Section</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 20px 24px 0;">
+                <h3 style="margin: 0; font-family: var(--font-heading); color: var(--text-primary); font-size: 1.3rem; font-weight: 600;">${section.sectionName}</h3>
+                <div>
+                    <button class="primary-btn btn-sm" onclick="openThSectionModal('${section.id}')" style="margin-right: 8px; background: transparent; border: 1px solid var(--border-color); color: var(--text-primary);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Edit Section
+                    </button>
+                    <button class="primary-btn btn-sm" onclick="deleteThSection('${section.id}')" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Delete
+                    </button>
+                </div>
             </div>
-            <div class="table-container">
-                <table class="data-table">
+            <div class="table-responsive" style="padding: 0 24px 24px;">
+                <table class="premium-table">
                     <thead>
                         <tr>${thHtml}</tr>
                     </thead>
