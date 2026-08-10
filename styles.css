@@ -6,52 +6,52 @@
     --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-    /* Theme colors: Premium Dark (Default) */
-    --bg-base: #0b0f19;
-    --bg-surface: #131b2e;
-    --bg-surface-elevated: #1e2942;
-    --border-color: rgba(255, 255, 255, 0.07);
-    --border-focus: rgba(99, 102, 241, 0.4);
+    /* Theme colors: Ultra Modern Dark */
+    --bg-base: #000000;
+    --bg-surface: #0a0a0c;
+    --bg-surface-elevated: #111115;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --border-focus: rgba(99, 102, 241, 0.5);
 
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1; /* High-contrast bright slate-300 */
-    --text-muted: #94a3b8; /* Highly visible bright slate-400 */
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa; 
+    --text-muted: #71717a; 
 
-    /* UI Accents - Harmonious Tailwind/Radix style HSL colors */
-    --primary: #6366f1; /* Indigo */
-    --primary-hover: #4f46e5;
-    --primary-rgb: 99, 102, 241;
+    /* UI Accents - Neon */
+    --primary: #818cf8; /* Bright Indigo */
+    --primary-hover: #6366f1;
+    --primary-rgb: 129, 140, 248;
     
-    --secondary: #06b6d4; /* Cyan */
-    --secondary-hover: #0891b2;
+    --secondary: #22d3ee; /* Neon Cyan */
+    --secondary-hover: #06b6d4;
 
-    --success: #10b981; /* Emerald */
-    --success-rgb: 16, 185, 129;
+    --success: #34d399; /* Emerald */
+    --success-rgb: 52, 211, 153;
     
-    --warning: #f59e0b; /* Amber */
-    --warning-rgb: 245, 158, 11;
+    --warning: #fbbf24; /* Amber */
+    --warning-rgb: 251, 191, 36;
     
-    --danger: #ef4444; /* Red */
-    --danger-rgb: 239, 68, 68;
+    --danger: #f87171; /* Red */
+    --danger-rgb: 248, 113, 113;
 
-    --purple: #a855f7;
-    --purple-rgb: 168, 85, 247;
+    --purple: #c084fc;
+    --purple-rgb: 192, 132, 252;
 
     /* Glassmorphism settings */
-    --glass-bg: rgba(19, 27, 46, 0.6);
-    --glass-blur: 16px;
-    --glass-border: rgba(255, 255, 255, 0.06);
-    --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --glass-bg: rgba(10, 10, 12, 0.6);
+    --glass-blur: 24px;
+    --glass-border: rgba(255, 255, 255, 0.04);
+    --shadow-premium: 0 16px 40px -8px rgba(0, 0, 0, 0.8), 0 0 24px rgba(129, 140, 248, 0.06);
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.5);
     
     /* Layout */
-    --sidebar-width: 260px;
-    --header-height: 70px;
+    --sidebar-width: 270px;
+    --header-height: 72px;
     --border-radius-lg: 16px;
     --border-radius-md: 10px;
     --border-radius-sm: 6px;
     
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Light Theme overrides */
@@ -3207,6 +3207,69 @@ textarea::placeholder {
     border-color: var(--primary) !important;
     background-color: #ffffff !important;
     box-shadow: 0 0 14px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* ==========================================================================
+   SIDEBAR DYNAMIC SUB-MENUS
+   ========================================================================== */
+.sidebar-sub-menu {
+    display: flex;
+    flex-direction: column;
+    padding-left: 20px;
+    margin-top: -4px;
+    margin-bottom: 8px;
+    border-left: 1px solid var(--border-color);
+    margin-left: 28px;
+    gap: 4px;
+}
+
+.sub-nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: var(--transition-smooth);
+    width: 100%;
+}
+
+.sub-nav-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sub-nav-btn.active {
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.1);
+}
+
+.sub-nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: var(--transition-smooth);
+    flex-shrink: 0;
+}
+
+.sub-nav-btn.active .sub-nav-dot {
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary);
+}
+
+/* Hide sub-menus on mobile */
+@media screen and (max-width: 900px) {
+    .sidebar-sub-menu {
+        display: none !important;
+    }
 }
 
 

@@ -497,6 +497,7 @@ function getStockLevelInfo(qtyText, minQtyText) {
 // ==========================================================================
 
 function renderAll() {
+    renderSidebar();
     renderDashboardStats();
     renderSpools();
     renderCabinetTabs();
@@ -3103,8 +3104,11 @@ function renderToolsAndHardware() {
     
     toolsAndHardware.forEach(section => {
         const sectionDiv = document.createElement('div');
-        sectionDiv.className = 'table-card glass-panel';
+        sectionDiv.id = `th-section-${section.id}`;
+        sectionDiv.className = 'table-card glass-panel th-section-card';
         sectionDiv.style.marginBottom = '32px';
+        sectionDiv.style.scrollMarginTop = '100px'; // For smooth scrolling offset
+        
         
         let thHtml = '';
         section.columns.forEach(col => {
@@ -4255,5 +4259,53 @@ function renderProjectDetails(projectId) {
         });
     }
 }
+
+// ==========================================================================
+// SIDEBAR NAVIGATION DYNAMIC UPDATES
+// ==========================================================================
+function renderSidebar() {
+    const hwSubMenu = document.getElementById('sidebar-hardware-sub');
+    const thSubMenu = document.getElementById('sidebar-th-sub');
+    if (!hwSubMenu || !thSubMenu) return;
+
+    // Hardware Sub-menu
+    hwSubMenu.innerHTML = '';
+    const uniqueBoxes = [...new Set(hardware.map(h => (h.boxNo || '').charAt(0).toUpperCase()).filter(c => c >= 'A' && c <= 'Z'))].sort();
+    
+    uniqueBoxes.forEach(sec => {
+        const btn = document.createElement('button');
+        btn.className = `sub-nav-btn ${activeTab === 'hardware' && activeCabinetSection === sec ? 'active' : ''}`;
+        btn.innerHTML = `<span class="sub-nav-dot"></span><span>Section ${sec}</span>`;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            switchTab('hardware');
+            activeCabinetSection = sec;
+            activeCabinetFilter = null;
+            renderCabinetTabs();
+            renderCabinetGrid();
+            renderHardware();
+            renderSidebar();
+        };
+        hwSubMenu.appendChild(btn);
+    });
+
+    // Tools & Hardwares Sub-menu
+    thSubMenu.innerHTML = '';
+    toolsAndHardware.forEach(sec => {
+        const btn = document.createElement('button');
+        btn.className = 'sub-nav-btn';
+        btn.innerHTML = `<span class="sub-nav-dot"></span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${sec.sectionName}</span>`;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            switchTab('general');
+            setTimeout(() => {
+                const el = document.getElementById(`th-section-${sec.id}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50); // slight delay to allow tab display to update
+        };
+        thSubMenu.appendChild(btn);
+    });
+}
+
 
 
