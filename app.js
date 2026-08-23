@@ -2020,6 +2020,18 @@ async function pushToCloud(isAutoSync = false) {
     }
 
     try {
+        let allBomItems = [];
+        projects.forEach(proj => {
+            if (proj.bomItems && Array.isArray(proj.bomItems)) {
+                proj.bomItems.forEach(b => {
+                    allBomItems.push({
+                        projectId: proj.projectId,
+                        ...b
+                    });
+                });
+            }
+        });
+
         const payload = {
             spools: spools.map(s => ({
                 id: s.id,
