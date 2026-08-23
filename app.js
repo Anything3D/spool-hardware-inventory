@@ -2537,7 +2537,9 @@ function setupProjectHandlers() {
 function saveProjectForm() {
     const idField = document.getElementById('project-id').value;
     const name = document.getElementById('proj-name').value.trim();
-    const desc = document.getElementById('proj-description').value.trim();
+    const desc = document.getElementById('proj-description') ? document.getElementById('proj-description').value.trim() : '';
+    const status = document.getElementById('proj-status') ? document.getElementById('proj-status').value : 'Planning';
+    const startDate = document.getElementById('proj-startDate') ? document.getElementById('proj-startDate').value : '';
 
     if (!name) return;
 
@@ -2546,12 +2548,16 @@ function saveProjectForm() {
         if (p) {
             p.projectName = name;
             p.description = desc;
+            p.status = status;
+            p.startDate = startDate;
         }
     } else {
         projects.push({
             projectId: 'proj-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
             projectName: name,
             description: desc,
+            status: status,
+            startDate: startDate,
             bomItems: []
         });
     }
@@ -2832,289 +2838,6 @@ function deleteBomItem(projectId, bomId) {
             }
         });
     }
-}
-
-// Toggle visibility of End Date and Closure Remarks fields based on Selected Stage
-function toggleProjectModalRemarks(status) {
-    const endDateGroup = document.getElementById('proj-endDate-group');
-    const remarksGroup = document.getElementById('proj-remarks-group');
-    const remarksTextarea = document.getElementById('proj-successReason');
-    const endDateInput = document.getElementById('proj-endDate');
-
-    if (status === 'Completed' || status === 'Cancelled') {
-        if (endDateGroup) endDateGroup.classList.remove('hidden');
-        if (remarksGroup) remarksGroup.classList.remove('hidden');
-        if (remarksTextarea) remarksTextarea.required = true;
-        
-        // Auto-fill end date if empty
-        if (endDateInput && !endDateInput.value) {
-            endDateInput.value = new Date().toISOString().split('T')[0];
-        }
-    } else {
-        if (endDateGroup) endDateGroup.classList.add('hidden');
-        if (remarksGroup) remarksGroup.classList.add('hidden');
-        if (remarksTextarea) {
-            remarksTextarea.required = false;
-            remarksTextarea.value = '';
-        }
-        if (endDateInput) endDateInput.value = '';
-    }
-}
-
-// Modal Builders Render UI
-function renderModalTasks() {
-    const list = document.getElementById('proj-tasks-list');
-    if (!list) return;
-    list.innerHTML = '';
-    
-    modalProjectTasks.forEach((t, idx) => {
-        const li = document.createElement('li');
-        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px; gap:8px;';
-        
-        if (editTaskIndex === idx) {
-            li.innerHTML = `
-                <input type="text" id="inline-task-edit-input" value="${t.text}" style="flex:1; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--primary); border-radius:4px; outline:none; color:var(--text-primary);">
-                <div style="display:flex; gap:4px;">
-                    <button type="button" class="icon-only-btn save-inline-task" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </button>
-                    <button type="button" class="icon-only-btn cancel-inline-task" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            `;
-        } else {
-            li.innerHTML = `
-                <span style="flex:1;">${t.text}</span>
-                <div style="display:flex; gap:4px; align-items:center;">
-                    <button type="button" class="icon-only-btn edit-modal-task" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit task">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    </button>
-                    <button type="button" class="icon-only-btn delete-icon delete-modal-task" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove task">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            `;
-        }
-        list.appendChild(li);
-    });
-
-    if (editTaskIndex !== null) {
-        const saveBtn = list.querySelector('.save-inline-task');
-        const cancelBtn = list.querySelector('.cancel-inline-task');
-        const input = list.querySelector('#inline-task-edit-input');
-        
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                const newVal = input.value.trim();
-                if (newVal) {
-                    modalProjectTasks[editTaskIndex].text = newVal;
-                }
-                editTaskIndex = null;
-                renderModalTasks();
-            });
-        }
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                editTaskIndex = null;
-                renderModalTasks();
-            });
-        }
-        if (input) {
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveBtn.click();
-                } else if (e.key === 'Escape') {
-                    cancelBtn.click();
-                }
-            });
-            input.focus();
-        }
-    } else {
-        list.querySelectorAll('.edit-modal-task').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                editTaskIndex = parseInt(e.currentTarget.getAttribute('data-index'));
-                renderModalTasks();
-            });
-        });
-        list.querySelectorAll('.delete-modal-task').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idx = parseInt(e.currentTarget.getAttribute('data-index'));
-                modalProjectTasks.splice(idx, 1);
-                renderModalTasks();
-            });
-        });
-    }
-}
-
-function renderModalBudget() {
-    const list = document.getElementById('proj-budget-list');
-    if (!list) return;
-    list.innerHTML = '';
-    
-    modalProjectBudget.forEach((b, idx) => {
-        const li = document.createElement('li');
-        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:12.5px; gap:8px;';
-        
-        if (editBudgetIndex === idx) {
-            li.innerHTML = `
-                <div style="display:flex; flex:1; gap:8px;">
-                    <input type="text" id="inline-budget-edit-item" value="${b.item}" style="flex:2; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary);">
-                    <input type="number" min="0" step="0.01" id="inline-budget-edit-cost" value="${b.cost}" style="flex:1; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary); max-width:80px;">
-                </div>
-                <div style="display:flex; gap:4px;">
-                    <button type="button" class="icon-only-btn save-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </button>
-                    <button type="button" class="icon-only-btn cancel-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            `;
-        } else {
-            li.innerHTML = `
-                <span style="font-weight:600; flex:1;">${b.item}</span>
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <span style="color:var(--secondary); font-weight:700;">$${b.cost.toFixed(2)}</span>
-                    <button type="button" class="icon-only-btn edit-modal-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit part">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    </button>
-                    <button type="button" class="icon-only-btn delete-icon delete-modal-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Remove item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            `;
-        }
-        list.appendChild(li);
-    });
-
-    if (editBudgetIndex !== null) {
-        const saveBtn = list.querySelector('.save-inline-budget');
-        const cancelBtn = list.querySelector('.cancel-inline-budget');
-        const itemInput = list.querySelector('#inline-budget-edit-item');
-        const costInput = list.querySelector('#inline-budget-edit-cost');
-        
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                const newItemVal = itemInput.value.trim();
-                const newCostVal = parseFloat(costInput.value);
-                if (newItemVal && !isNaN(newCostVal) && newCostVal >= 0) {
-                    modalProjectBudget[editBudgetIndex].item = newItemVal;
-                    modalProjectBudget[editBudgetIndex].cost = newCostVal;
-                }
-                editBudgetIndex = null;
-                renderModalBudget();
-            });
-        }
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                editBudgetIndex = null;
-                renderModalBudget();
-            });
-        }
-        if (itemInput) {
-            itemInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveBtn.click();
-                } else if (e.key === 'Escape') {
-                    cancelBtn.click();
-                }
-            });
-            costInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveBtn.click();
-                } else if (e.key === 'Escape') {
-                    cancelBtn.click();
-                }
-            });
-            itemInput.focus();
-        }
-    } else {
-        list.querySelectorAll('.edit-modal-budget').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                editBudgetIndex = parseInt(e.currentTarget.getAttribute('data-index'));
-                renderModalBudget();
-            });
-        });
-        list.querySelectorAll('.delete-modal-budget').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idx = parseInt(e.currentTarget.getAttribute('data-index'));
-                modalProjectBudget.splice(idx, 1);
-                renderModalBudget();
-            });
-        });
-    }
-}
-
-// Save Project Form Action
-function saveProjectForm() {
-    const id = document.getElementById('project-id').value;
-    const name = document.getElementById('proj-name').value.trim();
-    const status = document.getElementById('proj-status').value;
-    const startDate = document.getElementById('proj-startDate').value;
-    const endDate = document.getElementById('proj-endDate').value;
-    const imageUrls = document.getElementById('proj-imageUrls').value.trim();
-    const description = document.getElementById('proj-description').value.trim();
-    const lessonsLearned = document.getElementById('proj-lessonsLearned').value.trim();
-    const futurePlans = document.getElementById('proj-futurePlans').value.trim();
-    const successReason = document.getElementById('proj-successReason').value.trim();
-
-    if (!name || !startDate || !description) return;
-
-    if (id) {
-        // Edit Mode: overwrite details
-        const idx = projects.findIndex(p => p.projectId === id);
-        if (idx !== -1) {
-            const existingLog = projects[idx].statusLog || [];
-            projects[idx] = {
-                projectId: id,
-                projectName: name,
-                description,
-                status,
-                startDate,
-                endDate: (status === 'Completed' || status === 'Cancelled') ? (endDate || new Date().toISOString().split('T')[0]) : '',
-                successReason,
-                lessonsLearned,
-                futurePlans,
-                tasks: modalProjectTasks,
-                budget: modalProjectBudget,
-                statusLog: existingLog,
-                imageUrls
-            };
-            logActivity(`Updated project details of "${name}"`, 'info');
-        }
-    } else {
-        // Create Mode: add new project with default creation log
-        const newProj = {
-            projectId: 'proj-' + Date.now(),
-            projectName: name,
-            description,
-            status,
-            startDate,
-            endDate: (status === 'Completed' || status === 'Cancelled') ? (endDate || new Date().toISOString().split('T')[0]) : '',
-            successReason,
-            lessonsLearned,
-            futurePlans,
-            tasks: modalProjectTasks,
-            budget: modalProjectBudget,
-            statusLog: [
-                {
-                    date: new Date().toISOString().split('T')[0],
-                    note: `Project created at stage: ${status}`
-                }
-            ],
-            imageUrls
-        };
-        projects.push(newProj);
-        logActivity(`Successfully started new project build: "${name}"`, 'success');
-    }
-
-    renderAll();
-    modalProject.close();
-}
 
 function openEditProjectModal(id) {
     const p = projects.find(proj => proj.projectId === id);
@@ -3122,36 +2845,19 @@ function openEditProjectModal(id) {
 
     document.getElementById('modal-project-title').innerText = 'Edit Project Details';
     document.getElementById('project-id').value = p.projectId;
-    document.getElementById('proj-name').value = p.projectName;
-    document.getElementById('proj-status').value = p.status;
-    document.getElementById('proj-startDate').value = p.startDate;
-    document.getElementById('proj-endDate').value = p.endDate || '';
-    document.getElementById('proj-imageUrls').value = p.imageUrls || '';
-    document.getElementById('proj-description').value = p.description;
-    document.getElementById('proj-lessonsLearned').value = p.lessonsLearned || '';
-    document.getElementById('proj-futurePlans').value = p.futurePlans || '';
-    document.getElementById('proj-successReason').value = p.successReason || '';
-
-    // Copy arrays to modal variables
-    modalProjectTasks = JSON.parse(JSON.stringify(p.tasks || []));
-    modalProjectBudget = JSON.parse(JSON.stringify(p.budget || []));
     
-    renderModalTasks();
-    renderModalBudget();
-    
-    toggleProjectModalRemarks(p.status);
-    modalProject.showModal();
-}
+    const nameEl = document.getElementById('proj-name');
+    const descEl = document.getElementById('proj-description');
+    const statusEl = document.getElementById('proj-status');
+    const startDateEl = document.getElementById('proj-startDate');
 
-function deleteProject(id) {
-    const p = projects.find(proj => proj.projectId === id);
-    const label = p ? p.projectName : 'Unknown Project';
+    if(nameEl) nameEl.value = p.projectName || '';
+    if(descEl) descEl.value = p.description || '';
+    if(statusEl) statusEl.value = p.status || 'Planning';
+    if(startDateEl) startDateEl.value = p.startDate || '';
 
-    if (confirm(`CAUTION: Are you absolutely sure you want to delete the project "${label}"?\nThis will erase all checklists, parts cost, and journals.`)) {
-        projects = projects.filter(proj => proj.projectId !== id);
-        logActivity(`Deleted project "${label}" from plan`, 'warning');
-        renderAll();
-    }
+    const modal = document.getElementById('modal-project');
+    if(modal) modal.showModal();
 }
 
 // TOOLS & HARDWARE RENDERING
