@@ -3275,3 +3275,13 @@ textarea::placeholder {
 
 
 
+
+
+/* BOM UI Styles */
+.bom-section { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+.bom-table-container { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 16px; border: 1px solid var(--border-color); }
+.bom-table { width: 100%; border-collapse: collapse; }
+.bom-table th { text-align: left; padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); }
+.bom-table td { padding: 12px; font-size: 13.5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.bom-table tbody tr:last-child td { border-bottom: none; }
+.bom-table tbody tr:hover { background: rgba(255,255,255,0.02); }

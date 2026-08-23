@@ -2956,37 +2956,36 @@ function renderProjects() {
 
     // 1. Calculate General Dashboard Overview Stats across all projects
     const totalProjectsCount = projects.length;
+    const activeProjectsCount = projects.filter(p => p.status === 'In Progress').length;
+    
+    // We will recalculate total spend based on BOM "Need to purchase" items
     const totalSpendVal = projects.reduce((sum, p) => {
-        const projSpend = (p.budget || []).reduce((s, b) => s + (parseFloat(b.cost) || 0), 0);
+        const projSpend = (p.bomItems || []).reduce((s, b) => {
+            if (b.status === 'Need to purchase') {
+                return s + (parseFloat(b.costPerUnit) || 0) * (parseInt(b.qty) || 1);
+            }
+            return s;
+        }, 0);
         return sum + projSpend;
     }, 0);
-    const activeProjectsCount = projects.filter(p => p.status === 'In Progress').length;
-    const totalLogsCount = projects.reduce((sum, p) => sum + (p.statusLog || []).length, 0);
 
     // Apply to Stats cards
     const projStatTotalNode = document.getElementById('proj-stat-total');
     const projStatSpendNode = document.getElementById('proj-stat-spend');
     const projStatActiveNode = document.getElementById('proj-stat-active');
-    const projStatLogsNode = document.getElementById('proj-stat-logs');
-
+    
     if (projStatTotalNode) projStatTotalNode.innerText = totalProjectsCount;
     if (projStatSpendNode) projStatSpendNode.innerText = `$${totalSpendVal.toFixed(2)}`;
     if (projStatActiveNode) projStatActiveNode.innerText = activeProjectsCount;
-    if (projStatLogsNode) projStatLogsNode.innerText = totalLogsCount;
 
     // 2. Filter Projects
     const filtered = projects.filter(p => {
-        // Global search match
         const matchesSearch = searchQuery === '' || 
             p.projectName.toLowerCase().includes(searchQuery) ||
             p.description.toLowerCase().includes(searchQuery) ||
-            (p.lessonsLearned || '').toLowerCase().includes(searchQuery) ||
-            (p.futurePlans || '').toLowerCase().includes(searchQuery) ||
-            (p.tasks || []).some(t => t.text.toLowerCase().includes(searchQuery));
+            (p.bomItems || []).some(b => b.name && b.name.toLowerCase().includes(searchQuery));
 
-        // Stage matches
         const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-
         return matchesSearch && matchesStatus;
     });
 
@@ -3003,1036 +3002,207 @@ function renderProjects() {
     container.innerHTML = '';
 
     filtered.forEach(p => {
-        // Determine status-specific variables for visual aesthetics
         let statusColor = 'var(--primary)';
         let statusGlow = 'rgba(99, 102, 241, 0.04)';
         let statusShadowGlow = 'rgba(99, 102, 241, 0.12)';
-        let statusClass = 'good';
 
         if (p.status === 'Planning') {
             statusColor = 'var(--purple)';
             statusGlow = 'rgba(168, 85, 247, 0.04)';
             statusShadowGlow = 'rgba(168, 85, 247, 0.12)';
-            statusClass = 'low';
         } else if (p.status === 'In Progress') {
             statusColor = 'var(--secondary)';
             statusGlow = 'rgba(6, 182, 212, 0.04)';
             statusShadowGlow = 'rgba(6, 182, 212, 0.12)';
-            statusClass = 'good';
-        } else if (p.status === 'On Hold') {
-            statusColor = 'var(--warning)';
-            statusGlow = 'rgba(245, 158, 11, 0.04)';
-            statusShadowGlow = 'rgba(245, 158, 11, 0.12)';
-            statusClass = 'low';
         } else if (p.status === 'Completed') {
             statusColor = 'var(--success)';
             statusGlow = 'rgba(16, 185, 129, 0.04)';
             statusShadowGlow = 'rgba(16, 185, 129, 0.12)';
-            statusClass = 'good';
         } else if (p.status === 'Cancelled') {
             statusColor = 'var(--danger)';
             statusGlow = 'rgba(239, 68, 68, 0.04)';
             statusShadowGlow = 'rgba(239, 68, 68, 0.12)';
-            statusClass = 'out';
         }
 
-        // Parse images array
-        const imagesList = (p.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
+        const bomItems = p.bomItems || [];
+        const needToBuy = bomItems.filter(b => b.status === 'Need to purchase');
+        const haveIt = bomItems.filter(b => b.status === 'Have it already');
 
-        // Sub-tasks counts and progress percentage
-        const taskList = p.tasks || [];
-        const totalTasks = taskList.length;
-        const completedTasks = taskList.filter(t => t.completed).length;
-        const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        let totalNeedToBuyCost = 0;
 
-        // Sum Budget Spent
-        const budgetList = p.budget || [];
-        const projectSpend = budgetList.reduce((sum, b) => sum + (parseFloat(b.cost) || 0), 0);
-
-        // Calculate active timelines: "Days Open" age logic
-        let daysOpenLabel = '';
-        if (p.startDate) {
-            const startMs = Date.parse(p.startDate);
-            if (!isNaN(startMs)) {
-                if (p.status === 'Completed' || p.status === 'Cancelled') {
-                    const endMs = p.endDate ? Date.parse(p.endDate) : Date.now();
-                    const durationDays = Math.max(Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)), 1);
-                    daysOpenLabel = `Duration: ${durationDays} ${durationDays === 1 ? 'day' : 'days'}`;
-                } else {
-                    const openDays = Math.max(Math.floor((Date.now() - startMs) / (1000 * 60 * 60 * 24)), 0);
-                    daysOpenLabel = `Active: ${openDays} ${openDays === 1 ? 'day' : 'days'} open`;
-                }
-            }
-        }
-
-        const card = document.createElement('div');
-        card.className = 'project-card glass-panel';
-        card.setAttribute('style', `--status-color: ${statusColor}; --status-glow: ${statusGlow}; --status-shadow-glow: ${statusShadowGlow};`);
-        
-        // Carousel index tracking
-        if (projectCarouselIndices[p.projectId] === undefined) {
-            projectCarouselIndices[p.projectId] = 0;
-        }
-
-        // 1. Build Card Header & Image block
-        let imageMarkup = '';
-        if (imagesList.length > 0) {
-            const activeIndex = projectCarouselIndices[p.projectId];
-            
-            let dotsMarkup = '';
-            if (imagesList.length > 1) {
-                dotsMarkup = `<div class="project-carousel-dots">` + 
-                    imagesList.map((_, i) => `<span class="project-carousel-dot ${i === activeIndex ? 'active' : ''}" data-project="${p.projectId}" data-slide="${i}"></span>`).join('') +
-                    `</div>`;
-            }
-
-            let controlsMarkup = '';
-            if (imagesList.length > 1) {
-                controlsMarkup = `
-                    <button type="button" class="project-carousel-btn prev project-carousel-nav" data-project="${p.projectId}" data-dir="-1">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    </button>
-                    <button type="button" class="project-carousel-btn next project-carousel-nav" data-project="${p.projectId}" data-dir="1">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </button>
+        const renderBomRow = (b) => {
+            let rowCostHTML = '';
+            if (b.status === 'Need to purchase') {
+                const qty = parseInt(b.qty) || 1;
+                const cost = parseFloat(b.costPerUnit) || 0;
+                const rowTotal = qty * cost;
+                totalNeedToBuyCost += rowTotal;
+                rowCostHTML = `
+                    <td class="text-right">$${cost.toFixed(2)}</td>
+                    <td class="text-right" style="color:var(--secondary); font-weight:bold;">$${rowTotal.toFixed(2)}</td>
                 `;
             }
 
-            imageMarkup = `
-                <div class="project-carousel-wrapper">
-                    ${controlsMarkup}
-                    <div class="project-carousel-track" style="transform: translateX(-${activeIndex * 100}%);">
-                        ${imagesList.map(url => `
-                            <div class="project-carousel-slide">
-                                <img src="${url}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%232e2942%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2394a3b8%22 font-family=%22Plus Jakarta Sans%22 font-size=%2212%22>Failed to load image</text></svg>';" alt="Build photo">
-                            </div>
-                        `).join('')}
-                    </div>
-                    ${dotsMarkup}
-                </div>
-            `;
-        } else {
-            imageMarkup = `
-                <div class="project-carousel-wrapper">
-                    <div class="project-no-image">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                        <span>No build photos attached</span>
-                    </div>
-                </div>
-            `;
-        }
+            const imgHtml = b.photoUrl ? `<img src="${b.photoUrl}" style="width:32px; height:32px; object-fit:cover; border-radius:4px;" alt="photo">` : `<div style="width:32px; height:32px; background:var(--bg-surface); border-radius:4px; display:flex; align-items:center; justify-content:center;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--text-muted)" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>`;
+            const linkHtml = b.link ? `<a href="${b.link}" target="_blank" style="color:var(--primary);"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></a>` : '';
 
-        // 2. Checklist Items list markup
-        let checklistMarkup = '';
-        if (totalTasks > 0) {
-            checklistMarkup = `
-                <ul class="project-card-checklist">
-                    ${taskList.map(t => `
-                        <li class="project-card-task-item" data-project="${p.projectId}" data-task="${t.id}">
-                            <input type="checkbox" ${t.completed ? 'checked' : ''} class="project-card-task-checkbox">
-                            <span class="project-card-task-text ${t.completed ? 'completed' : ''}">${t.text}</span>
-                        </li>
-                    `).join('')}
-                </ul>
+            return `
+                <tr>
+                    <td style="width:40px;">${imgHtml}</td>
+                    <td>
+                        <div style="font-weight:600; color:var(--text-primary);">${b.name}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${b.specification || ''}</div>
+                    </td>
+                    <td style="text-align:center;">${b.qty}</td>
+                    ${rowCostHTML}
+                    <td style="text-align:center;">${linkHtml}</td>
+                    <td style="text-align:right;">
+                        <button class="icon-only-btn edit-bom-item" data-project="${p.projectId}" data-bom="${b.id}" style="color:var(--text-secondary); margin-right:4px;" title="Edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="icon-only-btn delete-bom-item delete-icon" data-project="${p.projectId}" data-bom="${b.id}" title="Delete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </td>
+                </tr>
             `;
-        } else {
-            checklistMarkup = `<p style="font-size:12px; color:var(--text-muted); font-style:italic;">No checklist items added. Edit project to build your checklist.</p>`;
-        }
+        };
 
-        // 3. Budget parts list micro-table
-        let budgetMarkup = '';
-        if (budgetList.length > 0) {
-            budgetMarkup = `
-                <table class="project-card-budget-table">
-                    <thead>
-                        <tr>
-                            <th>Part / Material</th>
-                            <th class="text-right">Price</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${budgetList.map(b => `
-                            <tr>
-                                <td style="font-weight:600;">${b.item}</td>
-                                <td class="text-right" style="color:var(--text-primary); font-weight:700;">$${b.cost.toFixed(2)}</td>
-                                <td class="text-right">
-                                    <button type="button" class="icon-only-btn delete-icon delete-card-budget-item" data-project="${p.projectId}" data-item="${b.id}" style="padding:2px; display:inline-flex;" title="Delete purchase">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-        } else {
-            budgetMarkup = `<p style="font-size:12px; color:var(--text-muted); font-style:italic; margin-bottom:12px;">No logged parts. Use inputs below to add a purchase.</p>`;
-        }
+        const needToBuyRows = needToBuy.map(renderBomRow).join('');
+        const haveItRows = haveIt.map(renderBomRow).join('');
 
-        // 4. Daily Diaries logs lists vertical trail
-        let logsMarkup = '';
-        const logsList = p.statusLog || [];
-        if (logsList.length > 0) {
-            logsMarkup = `
-                <div class="project-card-timeline">
-                    ${logsList.map(log => `
-                        <div class="project-card-timeline-item">
-                            <div class="project-card-timeline-bullet"></div>
-                            <div class="project-card-timeline-date">${log.date}</div>
-                            <div class="project-card-timeline-note">${log.note}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } else {
-            logsMarkup = `<p style="font-size:12px; color:var(--text-muted); font-style:italic; margin-bottom:12px;">No logged diary journals. Add progress entries below.</p>`;
-        }
-
-        // 5. Lessons Learned / Future Plans
-        let notesDrawerMarkup = '';
-        if (p.lessonsLearned || p.futurePlans) {
-            notesDrawerMarkup = `
-                <div class="project-drawer" data-drawer="notes">
-                    <button class="project-drawer-trigger">
-                        <span>💡 Reference & Lessons Learned</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="project-drawer-content" style="display:flex; flex-direction:column; gap:12px;">
-                        ${p.lessonsLearned ? `<div><h5 style="font-size:11px; text-transform:uppercase; color:var(--purple); font-weight:700;">Lessons Learned:</h5><p style="font-size:12px; font-style:italic; margin-top:2px; line-height:1.4; color:var(--text-secondary);">${p.lessonsLearned}</p></div>` : ''}
-                        ${p.futurePlans ? `<div><h5 style="font-size:11px; text-transform:uppercase; color:var(--secondary); font-weight:700;">Future Plans:</h5><p style="font-size:12px; margin-top:2px; line-height:1.4; color:var(--text-secondary);">${p.futurePlans}</p></div>` : ''}
-                    </div>
-                </div>
-            `;
-        }
-
-        // 6. Closure Remarks
-        let closureRemarksMarkup = '';
-        if ((p.status === 'Completed' || p.status === 'Cancelled') && p.successReason) {
-            closureRemarksMarkup = `
-                <div class="project-closure-remarks ${p.status === 'Cancelled' ? 'cancelled' : ''}">
-                    <div class="project-closure-title">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px; height:14px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        <span>${p.status === 'Completed' ? 'Closure Success Note' : 'Cancellation Reason'}</span>
-                    </div>
-                    <div class="project-closure-text">"${p.successReason}"</div>
-                </div>
-            `;
-        }
-
-        // Assemble full card HTML body
+        const card = document.createElement('div');
+        card.className = 'project-card glass-panel';
+        card.setAttribute('style', `--status-color: ${statusColor}; --status-glow: ${statusGlow}; --status-shadow-glow: ${statusShadowGlow}; padding: 24px;`);
+        
         card.innerHTML = `
-            <div class="project-card-actions">
-                <button class="icon-only-btn edit-project" data-id="${p.projectId}" title="Edit project">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>
-                <button class="icon-only-btn delete-icon delete-project" data-id="${p.projectId}" title="Delete project">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                </button>
-            </div>
-
-            <div class="project-card-header">
-                <div class="project-brand-material">
-                    <span class="project-date-badge">${p.startDate} ${p.endDate ? `&rarr; ${p.endDate}` : ''}</span>
-                    <span class="project-card-title">${p.projectName}</span>
-                </div>
-                <div class="project-status-row">
-                    <span class="status-pill ${statusClass}">
-                        <span class="status-indicator"></span>
-                        <span>${p.status}</span>
-                    </span>
-                    <span style="font-size:11px; font-weight:700; color:var(--text-muted);">${daysOpenLabel}</span>
+            <div class="project-card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 20px;">
+                <div class="project-card-title-row" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <h3 style="margin:0 0 8px 0; font-size:18px; color:var(--text-primary);">${p.projectName}</h3>
+                        <div class="project-progress-meta" style="margin-bottom:8px;">
+                            <span class="status-pill" style="background:${statusColor}20; color:${statusColor}; border:1px solid ${statusColor}40;">${p.status}</span>
+                        </div>
+                        <div class="project-description" style="color:var(--text-secondary); font-size:13.5px;">${p.description}</div>
+                    </div>
+                    <div class="project-card-actions" style="display:flex; gap:8px;">
+                        <button class="icon-only-btn edit-project" data-id="${p.projectId}" style="background:var(--bg-surface-elevated); padding:8px; border-radius:6px; border:1px solid var(--border-color);" title="Edit Project">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="icon-only-btn delete-project delete-icon" data-id="${p.projectId}" style="background:var(--bg-surface-elevated); padding:8px; border-radius:6px; border:1px solid var(--border-color);" title="Delete Project">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; color:var(--danger);"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            ${imageMarkup}
-
-            <div class="project-progress-container">
-                <div class="project-progress-meta">
-                    <span class="project-progress-label">Task Progress</span>
-                    <span class="project-progress-percent">${progressPercent}%</span>
+            <div class="bom-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                    <h4 style="margin:0; font-size:16px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                        Bill of Materials (BOM)
+                    </h4>
+                    <button class="btn btn-primary add-bom-item" data-project="${p.projectId}" style="padding:6px 12px; font-size:12.5px;">+ Add Item</button>
                 </div>
-                <div class="project-progress-outer">
-                    <div class="project-progress-inner" style="width: ${progressPercent}%;"></div>
-                </div>
-            </div>
-
-            <div class="project-details-grid">
-                <div class="project-description">"${p.description}"</div>
                 
-                <div class="project-info-row">
-                    <span class="project-info-label">Total Spend:</span>
-                    <span class="project-info-val" style="color:var(--secondary); font-size:14px;">$${projectSpend.toFixed(2)}</span>
+                ${needToBuy.length > 0 ? `
+                <div class="bom-table-container" style="margin-bottom:24px;">
+                    <h5 style="margin:0 0 12px 0; font-size:13.5px; color:var(--warning); display:flex; align-items:center; gap:6px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                        Need to Purchase
+                    </h5>
+                    <table class="bom-table w-full">
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>Item</th>
+                                <th style="text-align:center;">Qty</th>
+                                <th class="text-right">Unit Price</th>
+                                <th class="text-right">Total</th>
+                                <th style="text-align:center;">Link</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${needToBuyRows}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" style="text-align:right; font-weight:600; font-size:13px; color:var(--text-muted); border-top:1px solid var(--border-color); padding-top:12px;">Estimated Spend:</td>
+                                <td colspan="3" style="text-align:left; font-weight:800; font-size:15px; color:var(--secondary); border-top:1px solid var(--border-color); padding-top:12px; padding-left:12px;">$${totalNeedToBuyCost.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
-                <div class="project-info-row">
-                    <span class="project-info-label">Tasks Checked:</span>
-                    <span class="project-info-val">${completedTasks} / ${totalTasks} completed</span>
+                ` : `<div style="margin-bottom:24px; padding:16px; border:1px dashed var(--border-color); border-radius:8px; text-align:center; color:var(--text-muted); font-size:13px;">No items in the 'Need to Purchase' list.</div>`}
+
+                ${haveIt.length > 0 ? `
+                <div class="bom-table-container">
+                    <h5 style="margin:0 0 12px 0; font-size:13.5px; color:var(--success); display:flex; align-items:center; gap:6px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        Have it already
+                    </h5>
+                    <table class="bom-table w-full">
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>Item</th>
+                                <th style="text-align:center;">Qty</th>
+                                <th style="text-align:center;">Link</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${haveItRows}
+                        </tbody>
+                    </table>
                 </div>
+                ` : ``}
             </div>
-
-            <!-- Expandable Drawers (Checklist, Budget, Diary status) -->
-            <div class="project-card-expanders">
-                <!-- 1. Tasks Checklist Drawer -->
-                <div class="project-drawer" data-drawer="tasks">
-                    <button class="project-drawer-trigger">
-                        <span>📝 Interactive Task Checklist (${completedTasks}/${totalTasks})</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="project-drawer-content">
-                        ${checklistMarkup}
-                    </div>
-                </div>
-
-                <!-- 2. Budget cost ledger Drawer -->
-                <div class="project-drawer" data-drawer="budget">
-                    <button class="project-drawer-trigger">
-                        <span>💲 Parts & Budget Tracker (Spent: $${projectSpend.toFixed(2)})</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="project-drawer-content">
-                        ${budgetMarkup}
-                        
-                        <!-- Quick purchase adding row directly on Card! -->
-                        <div class="card-drawer-input-row" style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.04); padding-top:12px;">
-                            <input type="text" placeholder="Add part bought..." class="card-budget-item-input" style="flex:2;">
-                            <input type="number" min="0" step="0.01" placeholder="$ Price" class="card-budget-cost-input" style="flex:1;">
-                            <button type="button" class="card-drawer-add-btn add-card-budget-item" data-project="${p.projectId}" title="Add purchase to ledger">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. Daily Status timeline diary Drawer -->
-                <div class="project-drawer" data-drawer="timeline">
-                    <button class="project-drawer-trigger">
-                        <span>📅 Daily Status Diary (${logsList.length} logs)</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="project-drawer-content">
-                        ${logsMarkup}
-
-                        <!-- Quick log adding row directly on Card! -->
-                        <div class="card-drawer-input-row" style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.04); padding-top:12px;">
-                            <input type="text" placeholder="Log today's progress..." class="card-timeline-note-input" style="flex:1;">
-                            <button type="button" class="card-drawer-add-btn add-card-timeline-item" data-project="${p.projectId}" title="Add entry to diary">Add Log</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4. Lessons learned Drawer -->
-                ${notesDrawerMarkup}
-            </div>
-
-            ${closureRemarksMarkup}
         `;
-
-        card.addEventListener('click', (e) => {
-            // Ignore clicking on action buttons, checkboxes, inputs, drawers or carousel buttons
-            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea') || e.target.closest('.project-carousel-dot') || e.target.closest('.project-drawer') || e.target.closest('.project-card-actions')) {
-                return;
-            }
-            activeProjectId = p.projectId;
-            switchTab('project-details');
-            renderProjectDetails(p.projectId);
-        });
 
         container.appendChild(card);
     });
 
     // WIRING INTERACTION EVENT LISTENERS ON RENDERED CARDS
 
-    // 1. Drawer expand toggles
-    document.querySelectorAll('.project-drawer-trigger').forEach(trigger => {
-        trigger.addEventListener('click', (e) => {
-            const drawer = e.currentTarget.closest('.project-drawer');
-            drawer.classList.toggle('active');
-        });
-    });
-
-    // 2. Sub-tasks checklist checkboxes interactive toggle
-    document.querySelectorAll('.project-card-task-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            // Prevent double triggers if clicked exactly on checkbox input
-            if (e.target.type === 'checkbox') return;
-            
-            const checkbox = item.querySelector('.project-card-task-checkbox');
-            checkbox.checked = !checkbox.checked;
-            toggleCardTaskCompleted(item.getAttribute('data-project'), item.getAttribute('data-task'), checkbox.checked);
-        });
-    });
-
-    document.querySelectorAll('.project-card-task-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
-            const item = e.target.closest('.project-card-task-item');
-            toggleCardTaskCompleted(item.getAttribute('data-project'), item.getAttribute('data-task'), e.target.checked);
-        });
-    });
-
-    // 3. Delete purchase directly from card ledger drawer
-    document.querySelectorAll('.delete-card-budget-item').forEach(btn => {
+    document.querySelectorAll('.add-bom-item').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const projId = btn.getAttribute('data-project');
-            const itemId = btn.getAttribute('data-item');
-            deleteCardBudgetItem(projId, itemId);
+            openAddBomModal(projId);
         });
     });
 
-    // 4. Quick add purchase directly from card drawer
-    document.querySelectorAll('.add-card-budget-item').forEach(btn => {
+    document.querySelectorAll('.edit-bom-item').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const projId = btn.getAttribute('data-project');
-            const container = btn.closest('.card-drawer-input-row');
-            const itemInput = container.querySelector('.card-budget-item-input');
-            const costInput = container.querySelector('.card-budget-cost-input');
-
-            const itemVal = itemInput.value.trim();
-            const costVal = parseFloat(costInput.value);
-
-            if (!itemVal || isNaN(costVal) || costVal < 0) return;
-
-            addCardBudgetItem(projId, itemVal, costVal);
+            const bomId = btn.getAttribute('data-bom');
+            openEditBomModal(projId, bomId);
         });
     });
 
-    // 5. Quick diary log entry directly from card drawer
-    document.querySelectorAll('.add-card-timeline-item').forEach(btn => {
+    document.querySelectorAll('.delete-bom-item').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const projId = btn.getAttribute('data-project');
-            const container = btn.closest('.card-drawer-input-row');
-            const noteInput = container.querySelector('.card-timeline-note-input');
-            const noteVal = noteInput.value.trim();
-
-            if (!noteVal) return;
-
-            addCardTimelineItem(projId, noteVal);
+            const bomId = btn.getAttribute('data-bom');
+            deleteBomItem(projId, bomId);
         });
     });
 
-    // 6. Image carousel arrow navigation button triggers
-    document.querySelectorAll('.project-carousel-nav').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const projId = btn.getAttribute('data-project');
-            const direction = parseInt(btn.getAttribute('data-dir'));
-            navigateCarousel(projId, direction);
-        });
-    });
-
-    // 7. Image carousel dots click indicators
-    document.querySelectorAll('.project-carousel-dot').forEach(dot => {
-        dot.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const projId = dot.getAttribute('data-project');
-            const slideIndex = parseInt(dot.getAttribute('data-slide'));
-            jumpToCarouselSlide(projId, slideIndex);
-        });
-    });
-
-    // 8. Open edit project details modal dialog pre-fills
     document.querySelectorAll('.edit-project').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation();
             const id = btn.getAttribute('data-id');
             openEditProjectModal(id);
         });
     });
 
-    // 9. Delete project build plan
     document.querySelectorAll('.delete-project').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation();
             const id = btn.getAttribute('data-id');
             deleteProject(id);
         });
     });
 }
-
-// INLINE PROJECT INTERACTION TRANSITIONS
-
-// 1. Checklist checkboxes checked/unchecked immediately updates databases
-function toggleCardTaskCompleted(projId, taskId, isCompleted) {
-    const projIdx = projects.findIndex(p => p.projectId === projId);
-    if (projIdx === -1) return;
-
-    const taskIdx = projects[projIdx].tasks.findIndex(t => t.id === taskId);
-    if (taskIdx === -1) return;
-
-    projects[projIdx].tasks[taskIdx].completed = isCompleted;
-
-    const taskText = projects[projIdx].tasks[taskIdx].text;
-    logActivity(`Checklist update: "${taskText}" marked ${isCompleted ? 'completed' : 'active'} on build card`, 'info');
-    
-    // Quick recalculations & storage saving
-    renderAll();
-}
-
-// 2. Budget cost entries inline additions and deletions immediately recalculates Spent stats
-function addCardBudgetItem(projId, item, cost) {
-    const projIdx = projects.findIndex(p => p.projectId === projId);
-    if (projIdx === -1) return;
-
-    projects[projIdx].budget.push({
-        id: 'b-' + Date.now(),
-        item: item,
-        cost: cost
-    });
-
-    logActivity(`Cost update: Logged purchase "${item}" ($${cost.toFixed(2)}) directly on card`, 'info');
-    
-    // Quick recalculations & storage saving
-    renderAll();
-}
-
-function deleteCardBudgetItem(projId, itemId) {
-    const projIdx = projects.findIndex(p => p.projectId === projId);
-    if (projIdx === -1) return;
-
-    const item = projects[projIdx].budget.find(b => b.id === itemId);
-    const itemName = item ? item.item : 'item';
-    const itemCost = item ? item.cost : 0;
-
-    projects[projIdx].budget = projects[projIdx].budget.filter(b => b.id !== itemId);
-
-    logActivity(`Cost update: Removed logged purchase "${itemName}" ($${itemCost.toFixed(2)}) from card`, 'warning');
-    
-    // Quick recalculations & storage saving
-    renderAll();
-}
-
-// 3. Chronological diary notes logged directly from card drawer
-function addCardTimelineItem(projId, note) {
-    const projIdx = projects.findIndex(p => p.projectId === projId);
-    if (projIdx === -1) return;
-
-    if (!projects[projIdx].statusLog) {
-        projects[projIdx].statusLog = [];
-    }
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    projects[projIdx].statusLog.push({
-        date: todayStr,
-        note: note
-    });
-
-    logActivity(`Progress update: Logged timeline status diary entry directly on card`, 'success');
-    
-    // Quick recalculations & storage saving
-    renderAll();
-}
-
-// 4. Image Carousel Track Transitions sliding calculations
-function navigateCarousel(projId, direction) {
-    const proj = projects.find(p => p.projectId === projId);
-    if (!proj) return;
-
-    const imagesList = (proj.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
-    if (imagesList.length <= 1) return;
-
-    let activeIndex = projectCarouselIndices[projId] || 0;
-    activeIndex = (activeIndex + direction + imagesList.length) % imagesList.length;
-    projectCarouselIndices[projId] = activeIndex;
-
-    // Shift Carousel track slider
-    const gridBoard = document.getElementById('projects-list-container');
-    if (!gridBoard) return;
-    
-    // Find the specific card
-    const cardNode = Array.from(gridBoard.querySelectorAll('.project-card')).find(c => {
-        const editBtn = c.querySelector('.edit-project');
-        return editBtn && editBtn.getAttribute('data-id') === projId;
-    });
-
-    if (cardNode) {
-        const track = cardNode.querySelector('.project-carousel-track');
-        if (track) {
-            track.style.transform = `translateX(-${activeIndex * 100}%)`;
-        }
-
-        // Toggle dots active classes
-        const dots = cardNode.querySelectorAll('.project-carousel-dot');
-        dots.forEach((dot, idx) => {
-            if (idx === activeIndex) {
-                dot.classList.add('active');
-            } else {
-                dot.classList.remove('active');
-            }
-        });
-    }
-}
-
-function jumpToCarouselSlide(projId, slideIndex) {
-    const proj = projects.find(p => p.projectId === projId);
-    if (!proj) return;
-
-    const imagesList = (proj.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
-    if (slideIndex < 0 || slideIndex >= imagesList.length) return;
-
-    projectCarouselIndices[projId] = slideIndex;
-
-    // Shift Carousel track slider
-    const gridBoard = document.getElementById('projects-list-container');
-    if (!gridBoard) return;
-    
-    // Find the specific card
-    const cardNode = Array.from(gridBoard.querySelectorAll('.project-card')).find(c => {
-        const editBtn = c.querySelector('.edit-project');
-        return editBtn && editBtn.getAttribute('data-id') === projId;
-    });
-
-    if (cardNode) {
-        const track = cardNode.querySelector('.project-carousel-track');
-        if (track) {
-            track.style.transform = `translateX(-${slideIndex * 100}%)`;
-        }
-
-        // Toggle dots active classes
-        const dots = cardNode.querySelectorAll('.project-carousel-dot');
-        dots.forEach((dot, idx) => {
-            if (idx === slideIndex) {
-                dot.classList.add('active');
-            } else {
-                dot.classList.remove('active');
-            }
-        });
-    }
-}
-
-
-
-function openStickyNoteEditor(projectId, fieldType) {
-    const proj = projects.find(p => p.projectId === projectId);
-    if (!proj) return;
-    
-    const modalStickyNote = document.getElementById('modal-sticky-note');
-    const titleEl = document.getElementById('modal-sticky-note-title');
-    const projEl = document.getElementById('modal-sticky-note-project');
-    const textareaEl = document.getElementById('sticky-note-textarea');
-    
-    document.getElementById('sticky-note-project-id').value = projectId;
-    document.getElementById('sticky-note-field-type').value = fieldType;
-    
-    if (titleEl) {
-        titleEl.innerText = fieldType === 'lessonsLearned' ? 'Lessons Learned (Future Reference)' : 'Next Steps & Future Plans';
-    }
-    if (projEl) {
-        projEl.innerText = proj.projectName;
-    }
-    if (textareaEl) {
-        textareaEl.value = proj[fieldType] || '';
-    }
-    
-    if (modalStickyNote) {
-        if (fieldType === 'lessonsLearned') {
-            modalStickyNote.setAttribute('data-note-style', 'yellow');
-        } else {
-            modalStickyNote.setAttribute('data-note-style', 'teal');
-        }
-        modalStickyNote.showModal();
-    }
-}
-
-function renderProjectDetails(projectId) {
-    const p = projects.find(proj => proj.projectId === projectId);
-    if (!p) return;
-
-    const nameEl = document.getElementById('proj-detail-name');
-    const descEl = document.getElementById('proj-detail-desc');
-    const statusPill = document.getElementById('proj-detail-status-pill');
-    const statusText = document.getElementById('proj-detail-status');
-    const durationEl = document.getElementById('proj-detail-duration');
-
-    if (nameEl) nameEl.innerText = p.projectName;
-    if (descEl) descEl.innerText = p.description || 'No description provided';
-    if (statusText) statusText.innerText = p.status;
-
-    if (statusPill) {
-        statusPill.className = 'status-pill';
-        if (p.status === 'Planning') statusPill.classList.add('low');
-        else if (p.status === 'In Progress') statusPill.classList.add('good');
-        else if (p.status === 'On Hold') statusPill.classList.add('low');
-        else if (p.status === 'Completed') statusPill.classList.add('good');
-        else if (p.status === 'Cancelled') statusPill.classList.add('out');
-    }
-
-    if (durationEl && p.startDate) {
-        const startMs = Date.parse(p.startDate);
-        if (!isNaN(startMs)) {
-            if (p.status === 'Completed' || p.status === 'Cancelled') {
-                const endMs = p.endDate ? Date.parse(p.endDate) : Date.now();
-                const durationDays = Math.max(Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)), 1);
-                durationEl.innerText = `Duration: ${durationDays} ${durationDays === 1 ? 'day' : 'days'}`;
-            } else {
-                const openDays = Math.max(Math.floor((Date.now() - startMs) / (1000 * 60 * 60 * 24)), 0);
-                durationEl.innerText = `Active: ${openDays} ${openDays === 1 ? 'day' : 'days'} open`;
-            }
-        }
-    }
-
-    const carouselTarget = document.getElementById('proj-detail-carousel-target');
-    if (carouselTarget) {
-        const imagesList = (p.imageUrls || '').split(',').map(url => url.trim()).filter(Boolean);
-        if (imagesList.length > 0) {
-            if (projectCarouselIndices[projectId] === undefined) {
-                projectCarouselIndices[projectId] = 0;
-            }
-            let activeIdx = projectCarouselIndices[projectId];
-            if (activeIdx >= imagesList.length) {
-                activeIdx = 0;
-                projectCarouselIndices[projectId] = 0;
-            }
-
-            let controlsMarkup = '';
-            if (imagesList.length > 1) {
-                controlsMarkup = `
-                    <button type="button" class="project-carousel-btn prev detail-carousel-nav" data-dir="-1">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    </button>
-                    <button type="button" class="project-carousel-btn next detail-carousel-nav" data-dir="1">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                    </button>
-                `;
-            }
-
-            let dotsMarkup = '';
-            if (imagesList.length > 1) {
-                dotsMarkup = `<div class="project-carousel-dots">` + 
-                    imagesList.map((_, i) => `<span class="project-carousel-dot detail-carousel-dot ${i === activeIdx ? 'active' : ''}" data-slide="${i}"></span>`).join('') +
-                    `</div>`;
-            }
-
-            carouselTarget.innerHTML = `
-                <div class="project-carousel-wrapper" style="height: 320px; border-radius: 8px; overflow: hidden; position: relative;">
-                    ${controlsMarkup}
-                    <div class="project-carousel-track" style="transform: translateX(-${activeIdx * 100}%); display: flex; height: 100%; transition: transform 0.4s ease;">
-                        ${imagesList.map(url => `
-                            <div class="project-carousel-slide" style="flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: var(--bg-surface-elevated);">
-                                <img src="${url}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%232e2942%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2394a3b8%22 font-family=%22Plus Jakarta Sans%22 font-size=%2212%22>Failed to load image</text></svg>';" alt="Build photo">
-                            </div>
-                        `).join('')}
-                    </div>
-                    ${dotsMarkup}
-                </div>
-            `;
-
-            carouselTarget.querySelectorAll('.detail-carousel-nav').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const direction = parseInt(btn.getAttribute('data-dir'));
-                    let newIdx = (projectCarouselIndices[projectId] + direction + imagesList.length) % imagesList.length;
-                    projectCarouselIndices[projectId] = newIdx;
-                    renderProjectDetails(projectId);
-                });
-            });
-
-            carouselTarget.querySelectorAll('.detail-carousel-dot').forEach(dot => {
-                dot.addEventListener('click', () => {
-                    projectCarouselIndices[projectId] = parseInt(dot.getAttribute('data-slide'));
-                    renderProjectDetails(projectId);
-                });
-            });
-        } else {
-            carouselTarget.innerHTML = `
-                <div class="project-no-image" style="height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border: 1.5px dashed var(--border-color); border-radius: 8px; color: var(--text-muted);">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 32px; height: 32px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    <span style="font-size: 13px;">No build photos attached. Upload files below.</span>
-                </div>
-            `;
-        }
-    }
-
-    const tasksContainer = document.getElementById('proj-detail-tasks-list-container');
-    if (tasksContainer) {
-        tasksContainer.innerHTML = '';
-        const taskList = p.tasks || [];
-        const total = taskList.length;
-        const completed = taskList.filter(t => t.completed).length;
-        const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-        const progressPercentEl = document.getElementById('proj-detail-progress-percent');
-        const progressInnerEl = document.getElementById('proj-detail-progress-inner');
-        if (progressPercentEl) progressPercentEl.innerText = `${progressPercent}% Completed`;
-        if (progressInnerEl) progressInnerEl.style.width = `${progressPercent}%`;
-
-        if (taskList.length === 0) {
-            tasksContainer.innerHTML = `<li style="font-size:12.5px; color:var(--text-muted); font-style:italic; padding: 10px 0;">No tasks currently in checklist.</li>`;
-        } else {
-            taskList.forEach((t, idx) => {
-                const li = document.createElement('li');
-                li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background-color:var(--bg-surface-elevated); border:1px solid var(--border-color); border-radius:var(--border-radius-sm); font-size:13px; gap:8px;';
-                
-                if (detailEditTaskIndex === idx) {
-                    li.innerHTML = `
-                        <input type="text" id="detail-inline-task-edit-input" value="${t.text}" style="flex:1; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--primary); border-radius:4px; outline:none; color:var(--text-primary);">
-                        <div style="display:flex; gap:4px;">
-                            <button type="button" class="icon-only-btn save-detail-inline-task" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            </button>
-                            <button type="button" class="icon-only-btn cancel-detail-inline-task" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    li.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:10px; flex:1; cursor:pointer;" class="detail-task-item-click">
-                            <input type="checkbox" ${t.completed ? 'checked' : ''} class="detail-task-checkbox" style="cursor:pointer;">
-                            <span class="detail-task-text ${t.completed ? 'completed' : ''}" style="color: var(--text-primary); font-size: 13.5px; font-weight: 500;">${t.text}</span>
-                        </div>
-                        <div style="display:flex; gap:6px; align-items:center;">
-                            <button type="button" class="icon-only-btn edit-detail-task" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit task title">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                            <button type="button" class="icon-only-btn delete-icon delete-detail-task" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Delete task">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </button>
-                        </div>
-                    `;
-                }
-                tasksContainer.appendChild(li);
-            });
-
-            if (detailEditTaskIndex !== null) {
-                const saveBtn = tasksContainer.querySelector('.save-detail-inline-task');
-                const cancelBtn = tasksContainer.querySelector('.cancel-detail-inline-task');
-                const input = tasksContainer.querySelector('#detail-inline-task-edit-input');
-                
-                if (saveBtn) {
-                    saveBtn.addEventListener('click', () => {
-                        const newVal = input.value.trim();
-                        if (newVal) {
-                            p.tasks[detailEditTaskIndex].text = newVal;
-                            logActivity(`Checklist update: Edited task description`, 'info');
-                            renderAll();
-                        }
-                        detailEditTaskIndex = null;
-                        renderProjectDetails(projectId);
-                    });
-                }
-                if (cancelBtn) {
-                    cancelBtn.addEventListener('click', () => {
-                        detailEditTaskIndex = null;
-                        renderProjectDetails(projectId);
-                    });
-                }
-                if (input) {
-                    input.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            saveBtn.click();
-                        } else if (e.key === 'Escape') {
-                            cancelBtn.click();
-                        }
-                    });
-                    input.focus();
-                }
-            } else {
-                tasksContainer.querySelectorAll('.detail-task-item-click').forEach((item, idx) => {
-                    item.addEventListener('click', (e) => {
-                        if (e.target.type === 'checkbox') return;
-                        const box = item.querySelector('.detail-task-checkbox');
-                        box.checked = !box.checked;
-                        p.tasks[idx].completed = box.checked;
-                        logActivity(`Checklist update: Marked task "${p.tasks[idx].text}" ${box.checked ? 'completed' : 'active'}`, 'info');
-                        renderAll();
-                        renderProjectDetails(projectId);
-                    });
-                });
-                tasksContainer.querySelectorAll('.detail-task-checkbox').forEach((checkbox, idx) => {
-                    checkbox.addEventListener('change', (e) => {
-                        p.tasks[idx].completed = e.target.checked;
-                        logActivity(`Checklist update: Marked task "${p.tasks[idx].text}" ${e.target.checked ? 'completed' : 'active'}`, 'info');
-                        renderAll();
-                        renderProjectDetails(projectId);
-                    });
-                });
-                tasksContainer.querySelectorAll('.edit-detail-task').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        detailEditTaskIndex = parseInt(e.currentTarget.getAttribute('data-index'));
-                        renderProjectDetails(projectId);
-                    });
-                });
-                tasksContainer.querySelectorAll('.delete-detail-task').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const idx = parseInt(e.currentTarget.getAttribute('data-index'));
-                        const deletedText = p.tasks[idx].text;
-                        p.tasks.splice(idx, 1);
-                        logActivity(`Checklist update: Deleted task "${deletedText}"`, 'warning');
-                        renderAll();
-                        renderProjectDetails(projectId);
-                    });
-                });
-            }
-        }
-    }
-
-    const budgetTbody = document.getElementById('proj-detail-budget-tbody');
-    if (budgetTbody) {
-        budgetTbody.innerHTML = '';
-        const budgetList = p.budget || [];
-        const totalSpend = budgetList.reduce((sum, b) => sum + (parseFloat(b.cost) || 0), 0);
-        
-        const spendBadge = document.getElementById('proj-detail-spend-badge');
-        if (spendBadge) spendBadge.innerText = `$${totalSpend.toFixed(2)}`;
-
-        if (budgetList.length === 0) {
-            budgetTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--text-muted); font-style:italic;">No custom project parts bought yet.</td></tr>`;
-        } else {
-            budgetList.forEach((b, idx) => {
-                const tr = document.createElement('tr');
-                if (detailEditBudgetIndex === idx) {
-                    tr.innerHTML = `
-                        <td style="padding: 8px 4px;">
-                            <input type="text" id="detail-inline-budget-edit-item" value="${b.item}" style="width:100%; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary);">
-                        </td>
-                        <td style="padding: 8px 4px; text-align:right;">
-                            <input type="number" min="0" step="0.01" id="detail-inline-budget-edit-cost" value="${b.cost}" style="width:70px; padding:4px 8px; font-size:12.5px; background:var(--bg-surface); border:1px solid var(--secondary); border-radius:4px; outline:none; color:var(--text-primary); text-align:right;">
-                        </td>
-                        <td style="padding: 8px 4px; text-align:right;">
-                            <div style="display:flex; gap:4px; justify-content:flex-end;">
-                                <button type="button" class="icon-only-btn save-detail-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--success);" title="Save changes">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px; height:12px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                </button>
-                                <button type="button" class="icon-only-btn cancel-detail-inline-budget" style="padding:4px; height:24px; width:24px; color:var(--danger);" title="Cancel">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                } else {
-                    tr.innerHTML = `
-                        <td style="padding: 10px 4px; font-weight: 600; color: var(--text-primary); font-size: 13px;">${b.item}</td>
-                        <td class="text-right" style="padding: 10px 4px; font-weight: 700; color: var(--secondary); font-size: 13.5px;">$${b.cost.toFixed(2)}</td>
-                        <td class="text-right" style="padding: 10px 4px;">
-                            <div style="display:flex; gap:4px; justify-content:flex-end; align-items:center;">
-                                <button type="button" class="icon-only-btn edit-detail-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px; color:var(--text-secondary);" title="Edit part details">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                </button>
-                                <button type="button" class="icon-only-btn delete-icon delete-detail-budget" data-index="${idx}" style="padding:4px; height:24px; width:24px;" title="Delete purchase">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px; height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                }
-                budgetTbody.appendChild(tr);
-            });
-
-            if (detailEditBudgetIndex !== null) {
-                const saveBtn = budgetTbody.querySelector('.save-detail-inline-budget');
-                const cancelBtn = budgetTbody.querySelector('.cancel-detail-inline-budget');
-                const itemInput = budgetTbody.querySelector('#detail-inline-budget-edit-item');
-                const costInput = budgetTbody.querySelector('#detail-inline-budget-edit-cost');
-                
-                if (saveBtn) {
-                    saveBtn.addEventListener('click', () => {
-                        const newItemVal = itemInput.value.trim();
-                        const newCostVal = parseFloat(costInput.value);
-                        if (newItemVal && !isNaN(newCostVal) && newCostVal >= 0) {
-                            p.budget[detailEditBudgetIndex].item = newItemVal;
-                            p.budget[detailEditBudgetIndex].cost = newCostVal;
-                            logActivity(`Cost update: Edited purchased part details`, 'info');
-                            renderAll();
-                        }
-                        detailEditBudgetIndex = null;
-                        renderProjectDetails(projectId);
-                    });
-                }
-                if (cancelBtn) {
-                    cancelBtn.addEventListener('click', () => {
-                        detailEditBudgetIndex = null;
-                        renderProjectDetails(projectId);
-                    });
-                }
-                if (itemInput) {
-                    itemInput.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            saveBtn.click();
-                        } else if (e.key === 'Escape') {
-                            cancelBtn.click();
-                        }
-                    });
-                    costInput.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            saveBtn.click();
-                        } else if (e.key === 'Escape') {
-                            cancelBtn.click();
-                        }
-                    });
-                    itemInput.focus();
-                }
-            } else {
-                budgetTbody.querySelectorAll('.edit-detail-budget').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        detailEditBudgetIndex = parseInt(e.currentTarget.getAttribute('data-index'));
-                        renderProjectDetails(projectId);
-                    });
-                });
-                budgetTbody.querySelectorAll('.delete-detail-budget').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const idx = parseInt(e.currentTarget.getAttribute('data-index'));
-                        const deletedItem = p.budget[idx].item;
-                        const deletedCost = p.budget[idx].cost;
-                        p.budget.splice(idx, 1);
-                        logActivity(`Cost update: Deleted part "${deletedItem}" ($${deletedCost.toFixed(2)})`, 'warning');
-                        renderAll();
-                        renderProjectDetails(projectId);
-                    });
-                });
-            }
-        }
-    }
-
-    const timelineContainer = document.getElementById('proj-detail-logs-timeline-container');
-    if (timelineContainer) {
-        timelineContainer.innerHTML = '';
-        const logsList = p.statusLog || [];
-        if (logsList.length === 0) {
-            timelineContainer.innerHTML = `<p style="font-size:12.5px; color:var(--text-muted); font-style:italic; padding: 10px 0;">No chronological status diary logs recorded yet.</p>`;
-        } else {
-            const sortedLogs = [...logsList].reverse();
-            sortedLogs.forEach(log => {
-                const item = document.createElement('div');
-                item.className = 'project-card-timeline-item';
-                item.style.cssText = 'position:relative; padding-left:24px; margin-bottom:16px;';
-                item.innerHTML = `
-                    <div class="project-card-timeline-bullet" style="position:absolute; left:0; top:4px; width:10px; height:10px; border-radius:50%; background-color:var(--primary); border:2px solid var(--bg-surface);"></div>
-                    <div class="project-card-timeline-date" style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">${log.date}</div>
-                    <div class="project-card-timeline-note" style="font-size:13px; color:var(--text-secondary); margin-top:4px; line-height:1.4; white-space:pre-wrap;">${log.note}</div>
-                `;
-                timelineContainer.appendChild(item);
-            });
-        }
-    }
-
-    const pinboard = document.getElementById('project-detail-pinboard');
-    if (pinboard) {
-        pinboard.innerHTML = `
-            <div class="sticky-note lessons-learned-note" id="sticky-lessons-learned" style="cursor: pointer;">
-                <div class="sticky-note-tape"></div>
-                <div class="sticky-note-pin"></div>
-                <div class="sticky-note-header">Lessons Learned</div>
-                <div class="sticky-note-body">${p.lessonsLearned ? p.lessonsLearned.replace(/\n/g, '<br>') : '<em>No lessons learned logged yet. Click here to add tips or warnings for your future projects!</em>'}</div>
-            </div>
-            <div class="sticky-note future-plans-note" id="sticky-future-plans" style="cursor: pointer;">
-                <div class="sticky-note-tape"></div>
-                <div class="sticky-note-pin"></div>
-                <div class="sticky-note-header">Next Steps / Plans</div>
-                <div class="sticky-note-body">${p.futurePlans ? p.futurePlans.replace(/\n/g, '<br>') : '<em>No future plans logged yet. Click here to map out upgrades or next steps!</em>'}</div>
-            </div>
-        `;
-        
-        document.getElementById('sticky-lessons-learned').addEventListener('click', () => {
-            openStickyNoteEditor(projectId, 'lessonsLearned');
-        });
-        document.getElementById('sticky-future-plans').addEventListener('click', () => {
-            openStickyNoteEditor(projectId, 'futurePlans');
-        });
-    }
-}
-
-// ==========================================================================
-// SIDEBAR NAVIGATION DYNAMIC UPDATES
-// ==========================================================================
 function renderSidebar() {
     const hwSubMenu = document.getElementById('sidebar-hardware-sub');
     const thSubMenu = document.getElementById('sidebar-th-sub');
