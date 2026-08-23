@@ -2507,9 +2507,41 @@ function setupProjectHandlers() {
                 const file = e.target.files[0];
                 const reader = new FileReader();
                 reader.onload = function(evt) {
-                    txtBomImg.value = evt.target.result;
-                    labelBomImg.innerText = 'File attached: ' + file.name;
-                    labelBomImg.style.color = 'var(--success)';
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 400; // Small size for Google Sheets 50k char limit
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // Convert to heavily compressed JPEG to avoid 50k char cell limit
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+                        
+                        if (dataUrl.length > 45000) {
+                            labelBomImg.innerText = 'Error: Image still too large!';
+                            labelBomImg.style.color = '#ef4444'; // Red
+                            txtBomImg.value = '';
+                        } else {
+                            txtBomImg.value = dataUrl;
+                            labelBomImg.innerText = 'Attached (Compressed): ' + file.name;
+                            labelBomImg.style.color = 'var(--success)';
+                        }
+                    };
+                    img.src = evt.target.result;
                 };
                 reader.readAsDataURL(file);
             }
