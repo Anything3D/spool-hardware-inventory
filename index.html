@@ -828,26 +828,25 @@
                 <input type="hidden" id="bom-project-id">
                 
                 <div class="form-row">
-                    <div class="form-group">
+                    <div class="form-group" style="flex:2;">
                         <label for="bom-name">Item Name *</label>
                         <input type="text" id="bom-name" placeholder="e.g., Flight Controller" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="flex:1;">
+                        <label for="bom-qty">Qty *</label>
+                        <input type="number" id="bom-qty" min="1" value="1" placeholder="1">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:1;">
                         <label for="bom-status">Purchase Status *</label>
                         <select id="bom-status" required>
                             <option value="Have it already">Have it already</option>
                             <option value="Need to purchase">Need to purchase</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="form-row" id="bom-purchase-fields" style="display: none;">
-                    <div class="form-group">
-                        <label for="bom-qty">Quantity Needed *</label>
-                        <input type="number" id="bom-qty" min="1" value="1" placeholder="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="bom-cost">Estimated Unit Cost ($) *</label>
+                    <div class="form-group" id="bom-purchase-fields" style="display: none; flex:1;">
+                        <label for="bom-cost">Unit Cost (AED) *</label>
                         <input type="number" id="bom-cost" min="0" step="0.01" placeholder="0.00">
                     </div>
                 </div>

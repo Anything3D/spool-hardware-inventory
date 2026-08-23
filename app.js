@@ -1952,10 +1952,10 @@ async function fetchFromCloud() {
                     projects = data.projects.map((proj, idx) => {
                         let parsedBomItems = [];
                         
-                        try {
-                            parsedBomItems = proj.bomItemsJson ? JSON.parse(proj.bomItemsJson) : [];
-                            if (!Array.isArray(parsedBomItems)) parsedBomItems = [];
-                        } catch (e) { console.error("Error parsing bomItemsJson", e); }
+                        // Map items from the new flat bomItems array
+                        if (data.bomItems && Array.isArray(data.bomItems)) {
+                            parsedBomItems = data.bomItems.filter(b => b.projectId === proj.projectId);
+                        }
                         
                         return {
                             projectId: proj.projectId || `proj-cloud-${Date.now()}-${idx}`,
@@ -2021,15 +2021,19 @@ async function pushToCloud(isAutoSync = false) {
 
     try {
         const payload = {
-            spools: spools.map(sp => ({
-                brand: sp.brand,
-                material: sp.material,
-                color: sp.color,
-                hex: sp.hex,
-                qty: Number(sp.qty) || 0,
-                reorder: Number(sp.reorder) || 0,
-                location: sp.location,
-                notes: sp.notes
+            spools: spools.map(s => ({
+                id: s.id,
+                brand: s.brand,
+                material: s.material,
+                colorName: s.colorName,
+                colorHex: s.colorHex,
+                type: s.type,
+                weight: s.weight,
+                remaining: s.remaining,
+                minRemaining: s.minRemaining !== undefined && s.minRemaining !== null && s.minRemaining !== '' ? s.minRemaining : '100',
+                price: s.price,
+                location: s.location,
+                notes: s.notes
             })),
             hardware: hardware.map(hw => ({
                 boxNo: hw.boxNo,
@@ -2051,9 +2055,9 @@ async function pushToCloud(isAutoSync = false) {
             projects: projects.map(proj => ({
                 projectId: proj.projectId,
                 projectName: proj.projectName,
-                description: proj.description,
-                bomItemsJson: JSON.stringify(proj.bomItems || [])
-            }))
+                description: proj.description
+            })),
+            bomItems: allBomItems
         };
 
         const response = await fetch(url, {
