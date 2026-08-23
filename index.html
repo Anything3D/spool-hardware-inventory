@@ -387,22 +387,14 @@
                     </div>
                 </section>
 
-                <!-- 5. PROJECT PLANNER VIEW -->
+                <!-- 5. PROJECT PLANNER VIEW (BOM Centric) -->
                 <section id="view-projects" class="app-view">
-                    <div class="view-header-row">
+                    <div class="view-header-row" style="align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px;">
                         <div class="view-header">
-                            <h1>Project Planner & Task Tracker</h1>
-                            <p class="subtitle">Track build stages, checklists, budgets, image carousels, and daily diaries</p>
+                            <h1>Project Planner</h1>
+                            <p class="subtitle">Track Bills of Materials (BOM) and plan project purchases</p>
                         </div>
                         <div class="header-filters">
-                            <select id="filter-project-status" class="select-filter">
-                                <option value="all">All Stages</option>
-                                <option value="Planning">Planning</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="On Hold">On Hold</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
-                            </select>
                             <button class="primary-btn" id="btn-add-project">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 <span>New Project</span>
@@ -410,188 +402,11 @@
                         </div>
                     </div>
 
-                    <!-- Project Statistics Cards -->
-                    <div class="stats-grid">
-                        <div class="stat-card glass-panel purple-glow">
-                            <div class="stat-icon-wrapper purple">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                            </div>
-                            <div class="stat-details">
-                                <h3>Total Projects</h3>
-                                <div class="stat-number" id="proj-stat-total">0</div>
-                                <span class="stat-label">In your registry</span>
-                            </div>
-                        </div>
-
-                        <div class="stat-card glass-panel blue-glow">
-                            <div class="stat-icon-wrapper blue">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                            </div>
-                            <div class="stat-details">
-                                <h3>Total Spent</h3>
-                                <div class="stat-number" id="proj-stat-spend">$0.00</div>
-                                <span class="stat-label">Budget cost spent</span>
-                            </div>
-                        </div>
-
-                        <div class="stat-card glass-panel amber-glow">
-                            <div class="stat-icon-wrapper amber">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                            </div>
-                            <div class="stat-details">
-                                <h3>Active Projects</h3>
-                                <div class="stat-number" id="proj-stat-active">0</div>
-                                <span class="stat-label">In Progress builds</span>
-                            </div>
-                        </div>
-
-                        <div class="stat-card glass-panel red-glow">
-                            <div class="stat-icon-wrapper red">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                            </div>
-                            <div class="stat-details">
-                                <h3>Logs Recorded</h3>
-                                <div class="stat-number" id="proj-stat-logs">0</div>
-                                <span class="stat-label">Daily status diaries</span>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Projects Grid Board -->
-                    <div class="projects-grid" id="projects-list-container">
+                    <div id="projects-list-container" style="display: flex; flex-direction: column; gap: 32px; margin-top: 16px;">
                         <div class="view-placeholder">
                             <span class="loader"></span>
                             <p>Loading projects...</p>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 4b. PROJECT DETAILS WORKBENCH VIEW [NEW] -->
-                <section id="view-project-details" class="app-view">
-                    <div class="view-header-row" style="align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px;">
-                        <div style="display: flex; align-items: center; gap: 16px;">
-                            <button type="button" class="secondary-btn" id="btn-project-detail-back" style="padding: 8px 14px; font-size: 13px; font-weight: 700; border-radius: var(--border-radius-md);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 16px; height: 16px; margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                                Back to Board
-                            </button>
-                            <div>
-                                <h1 id="proj-detail-name" style="font-family: var(--font-heading); font-size: 26px; font-weight: 800; color: var(--text-primary);">Project Workbench</h1>
-                                <p class="subtitle" id="proj-detail-desc" style="font-size: 13.5px; color: var(--text-muted); font-style: italic; margin-top: 4px;">Detail workbench view</p>
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span class="status-pill good" id="proj-detail-status-pill">
-                                <span class="status-indicator"></span>
-                                <span id="proj-detail-status">In Progress</span>
-                            </span>
-                            <span id="proj-detail-duration" style="font-size: 12px; font-weight: 700; color: var(--text-secondary); background-color: var(--bg-surface-elevated); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);">Active: 0 days open</span>
-                        </div>
-                    </div>
-
-                    <!-- Split Grids Workbench Layout -->
-                    <div class="workbench-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: start; margin-bottom: 32px;">
-                        
-                        <!-- Left Column: Media Gallery, Checklist, and Budgets -->
-                        <div style="display: flex; flex-direction: column; gap: 32px;">
-                            
-                            <!-- Large Image Gallery Workbench -->
-                            <div class="glass-panel" style="padding: 24px;">
-                                <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">Build Visual Gallery</h3>
-                                <div id="proj-detail-carousel-target">
-                                    <!-- Image carousel dynamically populated -->
-                                </div>
-                                <div class="image-upload-wrapper" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                                    <div>
-                                        <h5 style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary);">Attach New Build Photos</h5>
-                                        <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Convert and compress local files into database image sliders</p>
-                                    </div>
-                                    <div>
-                                        <input type="file" id="proj-image-file-details" accept="image/*" multiple style="display: none;">
-                                        <button type="button" class="primary-btn" id="btn-upload-proj-image-details" style="padding: 8px 14px; font-size: 12px; box-shadow: none;">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                            Upload Images
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Interactive Task Checklist Workbench -->
-                            <div class="glass-panel" style="padding: 24px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                    <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">Interactive Task Checklist</h3>
-                                    <span id="proj-detail-progress-percent" style="font-size: 13px; font-weight: 800; color: var(--primary);">0% Completed</span>
-                                </div>
-                                <div class="project-progress-outer" style="margin-bottom: 20px; height: 8px;">
-                                    <div class="project-progress-inner" id="proj-detail-progress-inner" style="width: 0%;"></div>
-                                </div>
-                                
-                                <!-- Add Task Inline Row -->
-                                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                                    <input type="text" id="proj-detail-task-input" placeholder="e.g. Wire printhead heater cartridge..." style="flex: 1; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
-                                    <button type="button" class="secondary-btn" id="btn-detail-add-task" style="padding: 8px 14px; font-size: 12.5px;">Add Task</button>
-                                </div>
-                                <ul id="proj-detail-tasks-list-container" style="display: flex; flex-direction: column; gap: 10px; list-style: none; padding-left: 0; max-height: 250px; overflow-y: auto;">
-                                    <!-- Populated dynamically -->
-                                </ul>
-                            </div>
-
-                            <!-- Parts Budget Tracker Workbench -->
-                            <div class="glass-panel" style="padding: 24px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-                                    <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">Parts Budget Cost Ledger</h3>
-                                    <div style="text-align: right;">
-                                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; letter-spacing: 0.5px;">Total Spent</span>
-                                        <span id="proj-detail-spend-badge" style="font-size: 18px; font-weight: 800; color: var(--secondary);">$0.00</span>
-                                    </div>
-                                </div>
-
-                                <!-- Add Budget Part Inline Row -->
-                                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                                    <input type="text" id="proj-detail-budget-item" placeholder="Part description..." style="flex: 2; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
-                                    <input type="number" id="proj-detail-budget-cost" min="0" step="0.01" placeholder="$ Price" style="flex: 1; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
-                                    <button type="button" class="secondary-btn" id="btn-detail-add-budget" style="padding: 8px 14px; font-size: 12.5px;">Add Part</button>
-                                </div>
-
-                                <div style="max-height: 250px; overflow-y: auto;">
-                                    <table class="project-card-budget-table" style="width: 100%;">
-                                        <thead>
-                                            <tr>
-                                                <th style="font-size: 12.5px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px;">Fastener / Part Bought</th>
-                                                <th class="text-right" style="font-size: 12.5px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px; width: 100px;">Cost</th>
-                                                <th class="text-right" style="font-size: 12.5px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 8px; width: 60px;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="proj-detail-budget-tbody">
-                                            <!-- Dynamically filled -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Column: Status Log Timeline diaries -->
-                        <div class="glass-panel" style="padding: 24px;">
-                            <h3 style="font-family: var(--font-heading); font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">Daily Status Timeline Diary</h3>
-                            
-                            <!-- Add timeline note inline row -->
-                            <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
-                                <input type="text" id="proj-detail-log-input" placeholder="Type today's build update..." style="flex: 1; padding: 8px 12px; background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); font-size: 13px; outline: none; color: var(--text-primary);">
-                                <button type="button" class="primary-btn" id="btn-detail-add-log" style="padding: 8px 14px; font-size: 12.5px; box-shadow: none;">Add Log</button>
-                            </div>
-
-                            <div id="proj-detail-logs-timeline-container" style="max-height: 800px; overflow-y: auto;">
-                                <!-- Timelines trail dynamically drawn -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bottom pinboard section for visual stickies -->
-                    <div class="glass-panel" style="padding: 28px; margin-top: 16px; background-color: rgba(19, 27, 46, 0.4); border-color: rgba(255, 255, 255, 0.04);">
-                        <h3 style="font-family: var(--font-heading); font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Lessons & Next Plans Pinboard</h3>
-                        <p style="font-size: 12.5px; color: var(--text-secondary); margin-bottom: 20px;">Interactive workshop corkboard. Click a sticky note below to read or edit its contents immediately.</p>
-                        
-                        <div class="project-pinboard" id="project-detail-pinboard">
-                            <!-- Visual sticky notes pinned here -->
                         </div>
                     </div>
                 </section>
@@ -983,97 +798,14 @@
             </div>
             <form id="form-project" method="dialog">
                 <input type="hidden" id="project-id">
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="proj-name">Project Name *</label>
-                        <input type="text" id="proj-name" placeholder="e.g., Voron 2.4 Build, ERCF Filament Feeder" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="proj-status">Stage / Status *</label>
-                        <select id="proj-status" required>
-                            <option value="Planning">Planning</option>
-                            <option value="In Progress" selected>In Progress</option>
-                            <option value="On Hold">On Hold</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="proj-startDate">Start Date *</label>
-                        <input type="date" id="proj-startDate" required>
-                    </div>
-                    <div class="form-group hidden" id="proj-endDate-group">
-                        <label for="proj-endDate">End Date</label>
-                        <input type="date" id="proj-endDate">
-                    </div>
-                </div>
-
                 <div class="form-group">
-                    <label for="proj-imageUrls">Project Image URLs (Comma-separated)</label>
-                    <input type="text" id="proj-imageUrls" placeholder="e.g., https://site.com/image.jpg">
-                    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <input type="file" id="proj-image-file" accept="image/*" multiple style="display: none;">
-                        <button type="button" class="secondary-btn" id="btn-upload-proj-image" style="padding: 6px 12px; font-size: 12px;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            Attach Local Images
-                        </button>
-                        <span id="proj-image-upload-status" style="font-size: 11px; color: var(--text-muted);">No files attached</span>
-                    </div>
-                    <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">You can paste web URLs or attach local images directly from your disk.</span>
+                    <label for="proj-name">Project Name *</label>
+                    <input type="text" id="proj-name" placeholder="e.g., Voron 2.4 Build, Custom FPV Drone" required>
                 </div>
-
                 <div class="form-group">
-                    <label for="proj-description">Project Description *</label>
-                    <textarea id="proj-description" rows="2" placeholder="Describe the goal and scope of this project..." required></textarea>
+                    <label for="proj-description">Project Description</label>
+                    <textarea id="proj-description" rows="3" placeholder="Describe the goal and scope of this project..."></textarea>
                 </div>
-
-                <!-- Interactive Sub-task builder -->
-                <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
-                    <label style="color: var(--primary);">Interactive Task Checklist</label>
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <input type="text" id="proj-task-input" placeholder="e.g., Assemble frame components" style="flex: 1;">
-                        <button type="button" class="secondary-btn" id="btn-add-proj-task" style="padding: 10px 14px;">Add Task</button>
-                    </div>
-                    <ul id="proj-tasks-list" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; padding-left: 0; list-style: none;">
-                        <!-- Checklist items populated by JS -->
-                    </ul>
-                </div>
-
-                <!-- Interactive Parts Budget builder -->
-                <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
-                    <label style="color: var(--secondary);">Budget Parts Tracker</label>
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <input type="text" id="proj-budget-item" placeholder="e.g., Linear Rail" style="flex: 2; margin-bottom: 0;">
-                        <input type="number" id="proj-budget-cost" min="0" step="0.01" placeholder="e.g., 45.00" style="flex: 1; margin-bottom: 0;">
-                        <button type="button" class="secondary-btn" id="btn-add-proj-budget" style="padding: 10px 14px;">Add Part</button>
-                    </div>
-                    <ul id="proj-budget-list" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; padding-left: 0; list-style: none;">
-                        <!-- Budget entries populated by JS -->
-                    </ul>
-                </div>
-
-                <!-- Project Notes / Lessons Learned / Future -->
-                <div class="form-row" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="proj-lessonsLearned">Lessons Learned (Future Reference)</label>
-                        <textarea id="proj-lessonsLearned" rows="2" placeholder="e.g., Double check frame squaring before locking gantry rails..."></textarea>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label for="proj-futurePlans">Next Steps / Future Plans</label>
-                        <textarea id="proj-futurePlans" rows="2" placeholder="e.g., Install a chamber heater, upgrade nozzle..."></textarea>
-                    </div>
-                </div>
-
-                <!-- Closure remarks (Completed/Cancelled only) -->
-                <div class="form-group hidden" id="proj-remarks-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
-                    <label for="proj-successReason" style="color: var(--success);">Success Notes / Closure Remarks *</label>
-                    <textarea id="proj-successReason" rows="2" placeholder="e.g., Project was a complete success! Reached speeds of 300mm/s..."></textarea>
-                </div>
-
                 <div class="modal-footer" style="margin-top: 24px; padding-top: 16px;">
                     <button type="button" class="secondary-btn" id="btn-cancel-project">Cancel</button>
                     <button type="submit" class="primary-btn" id="btn-save-project">Save Project</button>
@@ -1082,29 +814,75 @@
         </div>
     </dialog>
 
-    <!-- LARGE FORMAT STICKY NOTE NOTEPAD EDITOR DIALOG MODAL [NEW] -->
-    <dialog class="custom-modal" id="modal-sticky-note" style="max-width: 580px;">
-        <div class="modal-content glass-panel notepad-sheet" style="border: 2px solid var(--note-border-color, var(--primary)) !important; overflow: hidden; padding: 0;">
-            <div class="modal-header" style="background-color: var(--note-header-bg, var(--bg-surface-elevated)); padding: 20px 24px; border-bottom: 1.5px solid var(--note-border-color, var(--border-color));">
-                <div>
-                    <h2 id="modal-sticky-note-title" style="font-family: var(--font-heading); font-size: 18px; font-weight: 800; color: var(--note-text-color, var(--text-primary)); margin: 0;">Sticky Note</h2>
-                    <span id="modal-sticky-note-project" style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-top: 2px;">Project name</span>
-                </div>
-                <button class="modal-close" id="btn-close-sticky-note-modal" style="color: var(--note-text-color, var(--text-secondary));">
+    <!-- BOM ITEM ADD/EDIT DIALOG MODAL -->
+    <dialog class="custom-modal" id="modal-bom-item" style="max-width: 680px;">
+        <div class="modal-content glass-panel" style="max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 id="modal-bom-item-title">Add BOM Item</h2>
+                <button class="modal-close" id="btn-close-bom-item-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
-            <form id="form-sticky-note" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; background-color: var(--note-body-bg, var(--bg-surface));">
-                <input type="hidden" id="sticky-note-project-id">
-                <input type="hidden" id="sticky-note-field-type">
+            <form id="form-bom-item" method="dialog">
+                <input type="hidden" id="bom-item-id">
+                <input type="hidden" id="bom-project-id">
                 
-                <div class="form-group" style="margin: 0; background: transparent;">
-                    <textarea id="sticky-note-textarea" rows="10" placeholder="Type your notebook entry here..." style="width: 100%; padding: 20px; font-size: 15px; line-height: 1.6; border: none; outline: none; resize: none; background: transparent; font-family: var(--font-body); color: var(--note-textarea-color, var(--text-primary));" required></textarea>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bom-name">Item Name *</label>
+                        <input type="text" id="bom-name" placeholder="e.g., Flight Controller" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="bom-status">Purchase Status *</label>
+                        <select id="bom-status" required>
+                            <option value="Have it already">Have it already</option>
+                            <option value="Need to purchase">Need to purchase</option>
+                        </select>
+                    </div>
                 </div>
-                
-                <div class="modal-footer" style="padding-top: 16px; border-top: 1.5px solid var(--note-border-color, var(--border-color)); display: flex; justify-content: flex-end; gap: 12px;">
-                    <button type="button" class="secondary-btn" id="btn-cancel-sticky-note" style="border-color: var(--note-border-color, var(--border-color)); color: var(--note-text-color, var(--text-primary)); background: transparent;">Close</button>
-                    <button type="submit" class="primary-btn" id="btn-save-sticky-note" style="background-color: var(--note-save-bg, var(--primary)); border: none; box-shadow: none;">Save Note</button>
+
+                <div class="form-row" id="bom-purchase-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="bom-qty">Quantity Needed *</label>
+                        <input type="number" id="bom-qty" min="1" value="1" placeholder="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="bom-cost">Estimated Unit Cost ($) *</label>
+                        <input type="number" id="bom-cost" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="bom-specification">Specification</label>
+                    <input type="text" id="bom-specification" placeholder="e.g., 30.5x30.5mm mounting, 5V/3A BEC">
+                </div>
+
+                <div class="form-group">
+                    <label for="bom-link">Product / Store Link</label>
+                    <input type="url" id="bom-link" placeholder="https://store.example.com/item">
+                </div>
+
+                <div class="form-group">
+                    <label for="bom-photoUrl">Photo URL or Attach File</label>
+                    <input type="text" id="bom-photoUrl" placeholder="Image URL (optional)">
+                    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="bom-image-file" accept="image/*" style="display: none;">
+                        <button type="button" class="secondary-btn" id="btn-upload-bom-image" style="padding: 6px 12px; font-size: 12px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            Attach Local Image
+                        </button>
+                        <span id="bom-image-upload-status" style="font-size: 11px; color: var(--text-muted);">No file attached</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="bom-description">Notes / Description</label>
+                    <textarea id="bom-description" rows="2" placeholder="Any additional notes about this item..."></textarea>
+                </div>
+
+                <div class="modal-footer" style="margin-top: 24px; padding-top: 16px;">
+                    <button type="button" class="secondary-btn" id="btn-cancel-bom-item">Cancel</button>
+                    <button type="submit" class="primary-btn" id="btn-save-bom-item">Save Item</button>
                 </div>
             </form>
         </div>

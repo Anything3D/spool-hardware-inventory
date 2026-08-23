@@ -1950,39 +1950,18 @@ async function fetchFromCloud() {
                 
                 if (data.projects && Array.isArray(data.projects)) {
                     projects = data.projects.map((proj, idx) => {
-                        let parsedTasks = [];
-                        let parsedBudget = [];
-                        let parsedStatusLog = [];
+                        let parsedBomItems = [];
                         
                         try {
-                            parsedTasks = proj.tasksJson ? JSON.parse(proj.tasksJson) : [];
-                            if (!Array.isArray(parsedTasks)) parsedTasks = [];
-                        } catch (e) { console.error("Error parsing tasksJson", e); }
+                            parsedBomItems = proj.bomItemsJson ? JSON.parse(proj.bomItemsJson) : [];
+                            if (!Array.isArray(parsedBomItems)) parsedBomItems = [];
+                        } catch (e) { console.error("Error parsing bomItemsJson", e); }
                         
-                        try {
-                            parsedBudget = proj.budgetJson ? JSON.parse(proj.budgetJson) : [];
-                            if (!Array.isArray(parsedBudget)) parsedBudget = [];
-                        } catch (e) { console.error("Error parsing budgetJson", e); }
-                        
-                        try {
-                            parsedStatusLog = proj.statusLogJson ? JSON.parse(proj.statusLogJson) : [];
-                            if (!Array.isArray(parsedStatusLog)) parsedStatusLog = [];
-                        } catch (e) { console.error("Error parsing statusLogJson", e); }
-
                         return {
                             projectId: proj.projectId || `proj-cloud-${Date.now()}-${idx}`,
                             projectName: proj.projectName || 'Unnamed Project',
                             description: proj.description || '',
-                            status: proj.status || 'In Progress',
-                            startDate: proj.startDate || '',
-                            endDate: proj.endDate || '',
-                            successReason: proj.successReason || '',
-                            lessonsLearned: proj.lessonsLearned || '',
-                            futurePlans: proj.futurePlans || '',
-                            tasks: parsedTasks,
-                            budget: parsedBudget,
-                            statusLog: parsedStatusLog,
-                            imageUrls: proj.imageUrls || ''
+                            bomItems: parsedBomItems
                         };
                     });
                 }
@@ -2073,16 +2052,7 @@ async function pushToCloud(isAutoSync = false) {
                 projectId: proj.projectId,
                 projectName: proj.projectName,
                 description: proj.description,
-                status: proj.status,
-                startDate: proj.startDate,
-                endDate: proj.endDate,
-                successReason: proj.successReason,
-                lessonsLearned: proj.lessonsLearned,
-                futurePlans: proj.futurePlans,
-                tasksJson: JSON.stringify(proj.tasks || []),
-                budgetJson: JSON.stringify(proj.budget || []),
-                statusLogJson: JSON.stringify(proj.statusLog || []),
-                imageUrls: proj.imageUrls
+                bomItemsJson: JSON.stringify(proj.bomItems || [])
             }))
         };
 
@@ -2492,121 +2462,215 @@ function setupProjectHandlers() {
     const btnAddProject = document.getElementById('btn-add-project');
     const btnCloseProjectModal = document.getElementById('btn-close-project-modal');
     const btnCancelProject = document.getElementById('btn-cancel-project');
-    const projStatusSelect = document.getElementById('proj-status');
-    const projSuccessReason = document.getElementById('proj-successReason');
-    const projEndDate = document.getElementById('proj-endDate');
     
-    const btnAddProjTask = document.getElementById('btn-add-proj-task');
-    const btnAddProjBudget = document.getElementById('btn-add-proj-budget');
-    
-    const filterProjectStatus = document.getElementById('filter-project-status');
+    const btnCloseBomModal = document.getElementById('btn-close-bom-item-modal');
+    const btnCancelBom = document.getElementById('btn-cancel-bom-item');
+    const bomStatus = document.getElementById('bom-status');
 
-    if (!modalProject || !formProject) return;
-
-    // 1. Open Modal (New Project Mode)
     if (btnAddProject) {
         btnAddProject.addEventListener('click', () => {
             document.getElementById('modal-project-title').innerText = 'Add New Project';
-            formProject.reset();
+            document.getElementById('form-project').reset();
             document.getElementById('project-id').value = '';
-            
-            // Set start date to today's date automatically
-            document.getElementById('proj-startDate').value = new Date().toISOString().split('T')[0];
-            
-            // Reset modal temporary builders
-            modalProjectTasks = [];
-            modalProjectBudget = [];
-            renderModalTasks();
-            renderModalBudget();
-            
-            // Toggle visibility groups
-            toggleProjectModalRemarks('Planning');
-            modalProject.showModal();
+            document.getElementById('modal-project').showModal();
         });
     }
 
-    // 2. Close Modals
-    if (btnCloseProjectModal) {
-        btnCloseProjectModal.addEventListener('click', () => modalProject.close());
-    }
-    if (btnCancelProject) {
-        btnCancelProject.addEventListener('click', () => modalProject.close());
+    if (btnCloseProjectModal) btnCloseProjectModal.addEventListener('click', () => document.getElementById('modal-project').close());
+    if (btnCancelProject) btnCancelProject.addEventListener('click', () => document.getElementById('modal-project').close());
+
+    if (btnCloseBomModal) btnCloseBomModal.addEventListener('click', () => document.getElementById('modal-bom-item').close());
+    if (btnCancelBom) btnCancelBom.addEventListener('click', () => document.getElementById('modal-bom-item').close());
+
+    // Show/hide purchase fields based on BOM status
+    if (bomStatus) {
+        bomStatus.addEventListener('change', (e) => {
+            const fields = document.getElementById('bom-purchase-fields');
+            if (e.target.value === 'Need to purchase') {
+                fields.style.display = 'flex';
+            } else {
+                fields.style.display = 'none';
+            }
+        });
     }
 
-    // Close when clicking outside dialog frame
-    modalProject.addEventListener('click', (e) => {
-        const dialogDimensions = modalProject.getBoundingClientRect();
-        if (
-            e.clientX < dialogDimensions.left ||
-            e.clientX > dialogDimensions.right ||
-            e.clientY < dialogDimensions.top ||
-            e.clientY > dialogDimensions.bottom
-        ) {
-            modalProject.close();
+    // Photo upload logic for BOM items
+    const btnUploadBomImg = document.getElementById('btn-upload-bom-image');
+    const inputBomImg = document.getElementById('bom-image-file');
+    const labelBomImg = document.getElementById('bom-image-upload-status');
+    const txtBomImg = document.getElementById('bom-photoUrl');
+
+    if (btnUploadBomImg && inputBomImg) {
+        btnUploadBomImg.addEventListener('click', () => inputBomImg.click());
+        inputBomImg.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    txtBomImg.value = evt.target.result;
+                    labelBomImg.innerText = 'File attached: ' + file.name;
+                    labelBomImg.style.color = 'var(--success)';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Form Submits
+    const formProject = document.getElementById('form-project');
+    if (formProject) {
+        formProject.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveProjectForm();
+        });
+    }
+
+    const formBomItem = document.getElementById('form-bom-item');
+    if (formBomItem) {
+        formBomItem.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveBomItemForm();
+        });
+    }
+}
+
+function saveProjectForm() {
+    const idField = document.getElementById('project-id').value;
+    const name = document.getElementById('proj-name').value.trim();
+    const desc = document.getElementById('proj-description').value.trim();
+
+    if (!name) return;
+
+    if (idField) {
+        const p = projects.find(proj => proj.projectId === idField);
+        if (p) {
+            p.projectName = name;
+            p.description = desc;
         }
-    });
+    } else {
+        projects.push({
+            projectId: 'proj-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+            projectName: name,
+            description: desc,
+            bomItems: []
+        });
+    }
+    
+    logActivity(`Saved project: ${name}`, 'success');
+    document.getElementById('modal-project').close();
+    renderAll();
+}
 
-    // 3. Stage Change: Toggle Remarks & End Date
-    if (projStatusSelect) {
-        projStatusSelect.addEventListener('change', (e) => {
-            toggleProjectModalRemarks(e.target.value);
+function deleteProject(id) {
+    if (confirm('CAUTION: Are you sure you want to delete this project and its entire BOM?')) {
+        projects = projects.filter(p => p.projectId !== id);
+        logActivity('Deleted project', 'warning');
+        renderAll();
+    }
+}
+
+function openAddBomModal(projectId) {
+    document.getElementById('modal-bom-item-title').innerText = 'Add BOM Item';
+    document.getElementById('form-bom-item').reset();
+    document.getElementById('bom-item-id').value = '';
+    document.getElementById('bom-project-id').value = projectId;
+    
+    document.getElementById('bom-purchase-fields').style.display = 'none';
+    document.getElementById('bom-image-upload-status').innerText = 'No file attached';
+    document.getElementById('bom-image-upload-status').style.color = 'var(--text-muted)';
+    
+    document.getElementById('modal-bom-item').showModal();
+}
+
+function openEditBomModal(projectId, bomId) {
+    const p = projects.find(proj => proj.projectId === projectId);
+    if (!p) return;
+    const item = p.bomItems.find(b => b.id === bomId);
+    if (!item) return;
+
+    document.getElementById('modal-bom-item-title').innerText = 'Edit BOM Item';
+    document.getElementById('bom-item-id').value = item.id;
+    document.getElementById('bom-project-id').value = projectId;
+    
+    document.getElementById('bom-name').value = item.name || '';
+    document.getElementById('bom-status').value = item.status || 'Have it already';
+    document.getElementById('bom-qty').value = item.qty || 1;
+    document.getElementById('bom-cost').value = item.costPerUnit || '';
+    document.getElementById('bom-specification').value = item.specification || '';
+    document.getElementById('bom-link').value = item.link || '';
+    document.getElementById('bom-photoUrl').value = item.photoUrl || '';
+    document.getElementById('bom-description').value = item.description || '';
+
+    const fields = document.getElementById('bom-purchase-fields');
+    fields.style.display = (item.status === 'Need to purchase') ? 'flex' : 'none';
+
+    document.getElementById('bom-image-upload-status').innerText = item.photoUrl ? 'URL/Data provided' : 'No file attached';
+
+    document.getElementById('modal-bom-item').showModal();
+}
+
+function saveBomItemForm() {
+    const projId = document.getElementById('bom-project-id').value;
+    const itemId = document.getElementById('bom-item-id').value;
+    
+    const p = projects.find(proj => proj.projectId === projId);
+    if (!p) return;
+
+    if (!p.bomItems) p.bomItems = [];
+
+    const name = document.getElementById('bom-name').value.trim();
+    const status = document.getElementById('bom-status').value;
+    const qty = parseInt(document.getElementById('bom-qty').value) || 1;
+    const cost = parseFloat(document.getElementById('bom-cost').value) || 0.00;
+    const spec = document.getElementById('bom-specification').value.trim();
+    const link = document.getElementById('bom-link').value.trim();
+    const photo = document.getElementById('bom-photoUrl').value.trim();
+    const desc = document.getElementById('bom-description').value.trim();
+
+    if (!name) return;
+
+    if (itemId) {
+        const item = p.bomItems.find(b => b.id === itemId);
+        if (item) {
+            item.name = name;
+            item.status = status;
+            item.qty = qty;
+            item.costPerUnit = cost;
+            item.specification = spec;
+            item.link = link;
+            item.photoUrl = photo;
+            item.description = desc;
+        }
+    } else {
+        p.bomItems.push({
+            id: 'bom-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+            name: name,
+            status: status,
+            qty: qty,
+            costPerUnit: cost,
+            specification: spec,
+            link: link,
+            photoUrl: photo,
+            description: desc
         });
     }
 
-    // 4. Modal Sub-task List Builder
-    if (btnAddProjTask) {
-        btnAddProjTask.addEventListener('click', () => {
-            const taskInput = document.getElementById('proj-task-input');
-            const taskVal = taskInput.value.trim();
-            if (!taskVal) return;
+    logActivity(`Saved BOM item: ${name}`, 'success');
+    document.getElementById('modal-bom-item').close();
+    renderAll();
+}
 
-            modalProjectTasks.push({
-                id: 't-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-                text: taskVal,
-                completed: false
-            });
-
-            taskInput.value = '';
-            renderModalTasks();
-        });
+function deleteBomItem(projectId, bomId) {
+    if (confirm('Remove this item from the BOM?')) {
+        const p = projects.find(proj => proj.projectId === projectId);
+        if (p) {
+            p.bomItems = p.bomItems.filter(b => b.id !== bomId);
+            renderAll();
+        }
     }
+}
 
-    // 5. Modal Budget Parts Builder
-    if (btnAddProjBudget) {
-        btnAddProjBudget.addEventListener('click', () => {
-            const itemInput = document.getElementById('proj-budget-item');
-            const costInput = document.getElementById('proj-budget-cost');
-            const itemVal = itemInput.value.trim();
-            const costVal = parseFloat(costInput.value);
-
-            if (!itemVal || isNaN(costVal) || costVal < 0) return;
-
-            modalProjectBudget.push({
-                id: 'b-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-                item: itemVal,
-                cost: costVal
-            });
-
-            itemInput.value = '';
-            costInput.value = '';
-            renderModalBudget();
-        });
-    }
-
-    // 6. Project Modal Form Submit (Save / Overwrite)
-    formProject.addEventListener('submit', (e) => {
-        e.preventDefault();
-        saveProjectForm();
-    });
-
-    // 7. View Board Status Filter dropdown
-    if (filterProjectStatus) {
-        filterProjectStatus.addEventListener('change', () => {
-            renderProjects();
-        });
-    }
-
-    // 8. Workbench Details View Event Listeners & Sticky Note modal notepad handlers
+// Workbench Details View Event Listeners & Sticky Note modal notepad handlers
     const btnProjectDetailBack = document.getElementById('btn-project-detail-back');
     if (btnProjectDetailBack) {
         btnProjectDetailBack.addEventListener('click', () => {
