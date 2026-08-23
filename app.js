@@ -2975,7 +2975,7 @@ function renderProjects() {
     const projStatActiveNode = document.getElementById('proj-stat-active');
     
     if (projStatTotalNode) projStatTotalNode.innerText = totalProjectsCount;
-    if (projStatSpendNode) projStatSpendNode.innerText = `$${totalSpendVal.toFixed(2)}`;
+    if (projStatSpendNode) projStatSpendNode.innerText = `AED ${totalSpendVal.toFixed(2)}`;
     if (projStatActiveNode) projStatActiveNode.innerText = activeProjectsCount;
 
     // 2. Filter Projects
@@ -3038,8 +3038,8 @@ function renderProjects() {
                 const rowTotal = qty * cost;
                 totalNeedToBuyCost += rowTotal;
                 rowCostHTML = `
-                    <td class="text-right">$${cost.toFixed(2)}</td>
-                    <td class="text-right" style="color:var(--secondary); font-weight:bold;">$${rowTotal.toFixed(2)}</td>
+                    <td class="text-right">AED ${cost.toFixed(2)}</td>
+                    <td class="text-right" style="color:var(--secondary); font-weight:bold;">AED ${rowTotal.toFixed(2)}</td>
                 `;
             }
 
@@ -3057,6 +3057,9 @@ function renderProjects() {
                     ${rowCostHTML}
                     <td style="text-align:center;">${linkHtml}</td>
                     <td style="text-align:right;">
+                        <button class="icon-only-btn toggle-bom-status" data-project="${p.projectId}" data-bom="${b.id}" style="color:var(--primary); margin-right:4px;" title="Move to ${b.status === 'Need to purchase' ? 'Have it already' : 'Need to purchase'}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16"></path></svg>
+                        </button>
                         <button class="icon-only-btn edit-bom-item" data-project="${p.projectId}" data-bom="${b.id}" style="color:var(--text-secondary); margin-right:4px;" title="Edit">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
@@ -3129,7 +3132,7 @@ function renderProjects() {
                         <tfoot>
                             <tr>
                                 <td colspan="4" style="text-align:right; font-weight:600; font-size:13px; color:var(--text-muted); border-top:1px solid var(--border-color); padding-top:12px;">Estimated Spend:</td>
-                                <td colspan="3" style="text-align:left; font-weight:800; font-size:15px; color:var(--secondary); border-top:1px solid var(--border-color); padding-top:12px; padding-left:12px;">$${totalNeedToBuyCost.toFixed(2)}</td>
+                                <td colspan="3" style="text-align:left; font-weight:800; font-size:15px; color:var(--secondary); border-top:1px solid var(--border-color); padding-top:12px; padding-left:12px;">AED ${totalNeedToBuyCost.toFixed(2)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -3170,6 +3173,22 @@ function renderProjects() {
         btn.addEventListener('click', (e) => {
             const projId = btn.getAttribute('data-project');
             openAddBomModal(projId);
+        });
+    });
+
+    document.querySelectorAll('.toggle-bom-status').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const projId = btn.getAttribute('data-project');
+            const bomId = btn.getAttribute('data-bom');
+            const p = projects.find(proj => proj.projectId === projId);
+            if (p) {
+                const item = p.bomItems.find(b => b.id === bomId);
+                if (item) {
+                    item.status = item.status === 'Need to purchase' ? 'Have it already' : 'Need to purchase';
+                    logActivity(`BOM Item "${item.name}" status updated to ${item.status}`, 'info');
+                    renderAll();
+                }
+            }
         });
     });
 
