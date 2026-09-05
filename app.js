@@ -228,14 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     suppressAutoSync = false;
 
     // Automatically trigger cloud pull on startup if a valid session exists and URL is pre-filled
-    if (hasActiveSession) {
-        const startupUrl = cloudApiUrlInput ? cloudApiUrlInput.value.trim() : '';
-        if (startupUrl) {
-            setTimeout(() => {
-                fetchFromCloud();
-            }, 300);
-        }
-    }
+    // NOTE: Auto-fetch on startup is intentionally disabled.
+    // Cloud data should only be fetched manually (via "Fetch from Sheets" button)
+    // to prevent corrupt cloud data from overwriting correct local data on every refresh.
+    // The app loads reliably from localStorage on every page load.
 });
 
 // Switch Tab Router
@@ -1447,15 +1443,21 @@ function openEditSpoolModal(id) {
     const sp = spools.find(s => s.id === id);
     if (!sp) return;
 
+    // Defensive: ensure hex is a valid hex color string, not a number or garbage
+    const safeHex = (sp.hex && /^#[0-9A-Fa-f]{3,6}$/.test(sp.hex)) ? sp.hex : '#6366f1';
+    const safeColor = (sp.color && sp.color !== 'Default' && !sp.color.startsWith('#')) ? sp.color : (sp.color || '');
+    const safeQty = Number.isFinite(Number(sp.qty)) ? Number(sp.qty) : 0;
+    const safeReorder = Number.isFinite(Number(sp.reorder)) ? Number(sp.reorder) : 0;
+
     document.getElementById('modal-spool-title').innerText = 'Edit Spool Details';
     document.getElementById('spool-id').value = sp.id;
-    document.getElementById('spool-brand').value = sp.brand;
-    document.getElementById('spool-material').value = sp.material;
-    document.getElementById('spool-color').value = sp.color;
-    document.getElementById('spool-hex').value = sp.hex;
-    spoolColorPicker.value = sp.hex || '#6366f1';
-    document.getElementById('spool-qty').value = sp.qty !== undefined ? sp.qty : 1;
-    document.getElementById('spool-reorder').value = sp.reorder !== undefined ? sp.reorder : 1;
+    document.getElementById('spool-brand').value = sp.brand || '';
+    document.getElementById('spool-material').value = sp.material || '';
+    document.getElementById('spool-color').value = safeColor;
+    document.getElementById('spool-hex').value = safeHex;
+    spoolColorPicker.value = safeHex;
+    document.getElementById('spool-qty').value = safeQty;
+    document.getElementById('spool-reorder').value = safeReorder;
     document.getElementById('spool-location').value = sp.location || '';
     document.getElementById('spool-notes').value = sp.notes || '';
 
@@ -1909,11 +1911,11 @@ async function fetchFromCloud() {
                 if (data.spools && Array.isArray(data.spools)) {
                     spools = data.spools.map((sp, idx) => ({
                         id: sp.id || `sp-cloud-${Date.now()}-${idx}`,
-                        brand: sp.brand || 'Generic',
+                        brand: sp.brand || 'Unknown',
                         material: sp.material || 'PLA',
-                        color: sp.color || 'Default',
-                        hex: sp.hex || '#6366f1',
-                        qty: sp.qty !== undefined ? sp.qty : 0,
+                        color: sp.color || sp.colorName || 'Default',
+                        hex: sp.hex || sp.colorHex || '#6366f1',
+                        qty: Number(sp.qty) || 0,
                         reorder: Number(sp.reorder) || 0,
                         location: sp.location || '',
                         notes: sp.notes || ''
@@ -2037,13 +2039,10 @@ async function pushToCloud(isAutoSync = false) {
                 id: s.id,
                 brand: s.brand,
                 material: s.material,
-                colorName: s.colorName,
-                colorHex: s.colorHex,
-                type: s.type,
-                weight: s.weight,
-                remaining: s.remaining,
-                minRemaining: s.minRemaining !== undefined && s.minRemaining !== null && s.minRemaining !== '' ? s.minRemaining : '100',
-                price: s.price,
+                color: s.color,
+                hex: s.hex,
+                qty: Number(s.qty) || 0,
+                reorder: Number(s.reorder) || 0,
                 location: s.location,
                 notes: s.notes
             })),
