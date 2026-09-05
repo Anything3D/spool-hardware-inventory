@@ -228,10 +228,19 @@ document.addEventListener('DOMContentLoaded', () => {
     suppressAutoSync = false;
 
     // Automatically trigger cloud pull on startup if a valid session exists and URL is pre-filled
-    // NOTE: Auto-fetch on startup is intentionally disabled.
-    // Cloud data should only be fetched manually (via "Fetch from Sheets" button)
-    // to prevent corrupt cloud data from overwriting correct local data on every refresh.
-    // The app loads reliably from localStorage on every page load.
+    // Smart startup sync:
+    // - Auto-PUSH runs after every change (debounceAutoSync), so cloud is always up to date.
+    // - Auto-FETCH on startup only runs if local data is EMPTY (fresh browser / cleared cache).
+    //   This prevents corrupt cloud data from overwriting correct local data on every refresh,
+    //   while still auto-restoring your data if you open on a new device or clear your browser.
+    if (hasActiveSession) {
+        const startupUrl = cloudApiUrlInput ? cloudApiUrlInput.value.trim() : '';
+        const hasLocalData = spools.length > 0 || hardware.length > 0 || projects.length > 0;
+        if (startupUrl && !hasLocalData) {
+            logActivity('No local data found — restoring from Google Sheets...', 'info');
+            setTimeout(() => { fetchFromCloud(); }, 500);
+        }
+    }
 });
 
 // Switch Tab Router
