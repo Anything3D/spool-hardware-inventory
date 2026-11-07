@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexis Inventory | Spools & Hardware Tracker</title>
-    <!-- Google Fonts for premium typography -->
+    <title>Nexis Industrial | Spools, Hardware & BOM Inventory</title>
+    <!-- Google Fonts for industrial precision typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- FontAwesome or Lucide equivalents can be built visually/SVG, we will use inline SVGs for premium look -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="toast-container"></div>
+
     <!-- PREMIUM REAL-TIME AUTHENTICATION VIEW -->
     <div id="login-screen" class="login-wrapper">
         <div class="login-card glass-panel">
@@ -23,45 +25,44 @@
                         <line x1="12" y1="22.08" x2="12" y2="12"></line>
                     </svg>
                 </div>
-                <div class="login-text" style="display:flex; flex-direction:column;">
-                    <span class="brand-title" style="font-family: var(--font-heading); font-size: 24px; font-weight: 800; background: linear-gradient(to right, var(--text-primary), var(--text-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Nexis</span>
-                    <span class="brand-subtitle" style="font-size: 8px; font-weight: 700; letter-spacing: 2px; color: var(--primary);">INVENTORY ORGANIZER</span>
+                <div class="login-text">
+                    <span class="brand-title">Nexis</span>
+                    <span class="brand-subtitle">INDUSTRIAL INVENTORY</span>
                 </div>
             </div>
 
-            <p class="login-desc" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px; margin-top: 12px; text-align: center;">Sign in to securely synchronize and manage your workshop filaments and hardware database.</p>
+            <p class="login-desc">Sign in to synchronize and manage your workshop filaments, hardware bins, tools, and project BOMs.</p>
 
             <!-- Error Notification Alert Bubble -->
-            <div id="login-error-alert" class="login-alert-bubble hidden" style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--border-radius-md); color: var(--danger); font-size: 12.5px; font-weight: 600; margin-bottom: 20px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <div id="login-error-alert" class="login-alert-bubble hidden">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 <span id="login-error-msg">Invalid username or password.</span>
             </div>
 
-            <form id="form-login" class="login-form" style="width: 100%; display: flex; flex-direction: column; gap: 16px;">
+            <form id="form-login" class="login-form">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="login-username">Username</label>
-                    <div class="input-icon-wrapper" style="position: relative; width: 100%;">
-                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted); z-index: 10;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <div class="input-icon-wrapper">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <input type="text" id="login-username" placeholder="Enter username" class="login-input" required>
                     </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="login-password">Password</label>
-                    <div class="input-icon-wrapper" style="position: relative; width: 100%;">
-                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted); z-index: 10;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <div class="input-icon-wrapper">
+                        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                         <input type="password" id="login-password" placeholder="Enter password" class="login-input" style="padding-right: 42px;" required>
-                        <button type="button" class="eye-toggle-btn" id="btn-toggle-password" title="Show/Hide Password" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth); z-index: 10;">
-                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <button type="button" class="eye-toggle-btn" id="btn-toggle-password" title="Show/Hide Password">
+                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
                     </div>
                 </div>
 
-                <!-- Silent Google Sheets Cloud URL connection field (maintains robust sync without visual noise) -->
                 <input type="hidden" id="login-cloud-url">
 
-                <button type="submit" id="btn-login-submit" class="primary-btn full-width login-submit-btn" style="margin-top: 12px; justify-content: center; height: 44px; font-weight: 700; font-size: 14px; border-radius: 10px;">
-                    <span>Sign In</span>
+                <button type="submit" id="btn-login-submit" class="primary-btn full-width login-submit-btn">
+                    <span>Sign In to Workspace</span>
                 </button>
             </form>
         </div>
@@ -80,7 +81,7 @@
                 </div>
                 <div class="logo-text">
                     <span class="logo-title">Nexis</span>
-                    <span class="logo-subtitle">INVENTORY</span>
+                    <span class="logo-subtitle">INDUSTRIAL OS</span>
                 </div>
             </div>
 
@@ -92,20 +93,24 @@
                 <button class="nav-btn" data-tab="spools">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
                     <span>Filament Spools</span>
+                    <span class="nav-badge" id="nav-badge-spools">0</span>
                 </button>
                 <button class="nav-btn" data-tab="hardware">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
                     <span>Hardware Array</span>
+                    <span class="nav-badge" id="nav-badge-hardware">0</span>
                 </button>
                 <div id="sidebar-hardware-sub" class="sidebar-sub-menu"></div>
                 <button class="nav-btn" data-tab="general">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                     <span>Tools & Hardwares</span>
+                    <span class="nav-badge" id="nav-badge-th">0</span>
                 </button>
                 <div id="sidebar-th-sub" class="sidebar-sub-menu"></div>
                 <button class="nav-btn" data-tab="projects">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
                     <span>Project Planner</span>
+                    <span class="nav-badge" id="nav-badge-projects">0</span>
                 </button>
                 <button class="nav-btn" data-tab="sync">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.3-2-1.5-3.8-3.2-4.8L20 4H12v8l2.5-2.5c1.2.7 2 2 2.2 3.5.2.9 0 1.8-.4 2.6l4.9 3.9z"></path><path d="M2.8 9c-.7 1.2-1 2.5-.7 3.9.3 2 1.5 3.8 3.2 4.8L4 20h8v-8l-2.5 2.5c-1.2-.7-2-2-2.2-3.5-.2-.9 0-1.8.4-2.6L2.8 9z"></path></svg>
@@ -114,16 +119,16 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-profile" style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 12px; overflow: hidden;">
-                        <div class="user-avatar" style="flex-shrink: 0;">M</div>
-                        <div class="user-info" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <span class="user-name">Maker Stock</span>
+                <div class="user-profile">
+                    <div class="user-profile-left">
+                        <div class="user-avatar">G</div>
+                        <div class="user-info">
+                            <span class="user-name">Georgy</span>
                             <span class="user-role">Administrator</span>
                         </div>
                     </div>
-                    <button class="icon-only-btn logout-btn" id="btn-logout" title="Sign out of database" style="flex-shrink: 0; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--border-radius-sm); transition: var(--transition-smooth);">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 16px; height: 16px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <button class="icon-only-btn logout-btn" id="btn-logout" title="Sign out of database">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     </button>
                 </div>
             </div>
@@ -135,15 +140,20 @@
             <header class="top-header">
                 <div class="search-wrapper">
                     <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="global-search" placeholder="Search spools, hardware, sizes, brands...">
+                    <input type="text" id="global-search" placeholder="Search spools, bins, tools, specs, projects... ( / )">
+                    <button type="button" id="btn-clear-search" class="search-clear-btn hidden" title="Clear search">&times;</button>
                 </div>
                 <div class="header-actions">
+                    <div id="header-sync-pill" class="header-sync-pill" title="Click to open Google Sheets Sync settings">
+                        <span class="sync-dot" id="header-sync-dot"></span>
+                        <span id="header-sync-label">Cloud Ready</span>
+                    </div>
                     <button class="action-btn theme-toggle" id="theme-toggle-btn" title="Toggle visual theme">
                         <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></svg>
                     </button>
                     <button class="primary-btn header-add-btn" id="btn-quick-add">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        <span>Add Item</span>
+                        <span id="quick-add-label">Add Spool</span>
                     </button>
                 </div>
             </header>
@@ -153,25 +163,33 @@
                 
                 <!-- 1. DASHBOARD VIEW -->
                 <section id="view-dashboard" class="app-view active">
-                    <div class="view-header">
-                        <h1>Dashboard</h1>
-                        <p class="subtitle">Overview of your print materials and hardware fasteners</p>
+                    <div class="view-header-row">
+                        <div class="view-header">
+                            <h1>Industrial Command Center</h1>
+                            <p class="subtitle">Real-time stock telemetry across filaments, cabinet fasteners, workshop tools, and BOMs</p>
+                        </div>
+                        <div class="header-filters">
+                            <button class="secondary-btn" id="btn-dash-sync-now" title="Pull latest data from Google Sheets">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                <span>Sync Cloud</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Statistics Cards -->
                     <div class="stats-grid">
-                        <div class="stat-card glass-panel purple-glow">
+                        <div class="stat-card glass-panel purple-glow" data-goto="spools" style="cursor:pointer;">
                             <div class="stat-icon-wrapper purple">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                             </div>
                             <div class="stat-details">
                                 <h3>Total Filament</h3>
-                                <div class="stat-number" id="dash-total-weight">0.0 kg</div>
-                                <span class="stat-label" id="dash-spools-count">0 spools in inventory</span>
+                                <div class="stat-number" id="dash-total-weight">0 spools</div>
+                                <span class="stat-label" id="dash-spools-count">0 unique color/materials</span>
                             </div>
                         </div>
 
-                        <div class="stat-card glass-panel amber-glow">
+                        <div class="stat-card glass-panel amber-glow" data-goto="spools" style="cursor:pointer;">
                             <div class="stat-icon-wrapper amber">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                             </div>
@@ -182,18 +200,18 @@
                             </div>
                         </div>
 
-                        <div class="stat-card glass-panel blue-glow">
+                        <div class="stat-card glass-panel blue-glow" data-goto="hardware" style="cursor:pointer;">
                             <div class="stat-icon-wrapper blue">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                             </div>
                             <div class="stat-details">
-                                <h3>Hardware Items</h3>
+                                <h3>Hardware & Tools</h3>
                                 <div class="stat-number" id="dash-total-hardware">0</div>
-                                <span class="stat-label" id="dash-hardware-types">0 unique fastener types</span>
+                                <span class="stat-label" id="dash-hardware-types">0 unique SKUs tracked</span>
                             </div>
                         </div>
 
-                        <div class="stat-card glass-panel red-glow">
+                        <div class="stat-card glass-panel red-glow" data-goto="hardware" style="cursor:pointer;">
                             <div class="stat-icon-wrapper red">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                             </div>
@@ -203,29 +221,55 @@
                                 <span class="stat-label">Items below reorder limit</span>
                             </div>
                         </div>
+
+                        <div class="stat-card glass-panel emerald-glow" data-goto="projects" style="cursor:pointer;">
+                            <div class="stat-icon-wrapper emerald">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Project BOM Spend</h3>
+                                <div class="stat-number" id="dash-bom-spend">AED 0.00</div>
+                                <span class="stat-label" id="dash-projects-count">0 active projects</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Visual Analytics Grid -->
-                    <div class="analytics-grid">
+                    <!-- Low Stock Action Queue & Analytics Grid -->
+                    <div class="dashboard-main-grid">
+                        <!-- Left: Actionable Restock Queue -->
                         <div class="chart-card glass-panel">
-                            <h3>Filament Stock by Material</h3>
-                            <div class="chart-container">
-                                <div class="bar-chart-visual" id="material-bar-chart">
-                                    <!-- Dynamic bar chart rendered by JS -->
-                                    <div class="chart-placeholder">Loading material distributions...</div>
+                            <div class="card-section-header">
+                                <div>
+                                    <h3>Priority Reorder & Low Stock Queue</h3>
+                                    <p class="card-section-sub">Items across all categories currently at or below alert thresholds</p>
                                 </div>
+                                <span class="code-badge" id="dash-reorder-badge">0 Alerts</span>
+                            </div>
+                            <div id="dash-reorder-list" class="reorder-queue-list">
+                                <div class="chart-placeholder">All inventory levels healthy.</div>
                             </div>
                         </div>
 
-                        <div class="chart-card glass-panel">
-                            <h3>Recent Inventory Activity & Quick Alerts</h3>
-                            <div class="activity-container" id="activity-feed">
-                                <!-- Quick alerts list -->
-                                <div class="activity-item info">
-                                    <div class="activity-marker"></div>
-                                    <div class="activity-body">
-                                        <p class="activity-title">Welcome to Nexis Inventory</p>
-                                        <p class="activity-time">Click the Sheets Sync tab to import your existing inventory sheet.</p>
+                        <!-- Right Column: Material Distribution + Activity -->
+                        <div class="dashboard-side-stack">
+                            <div class="chart-card glass-panel">
+                                <h3>Filament Stock by Material</h3>
+                                <div class="chart-container">
+                                    <div class="bar-chart-visual" id="material-bar-chart">
+                                        <div class="chart-placeholder">Loading material distributions...</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="chart-card glass-panel">
+                                <h3>System Telemetry & Activity Log</h3>
+                                <div class="activity-container" id="activity-feed">
+                                    <div class="activity-item info">
+                                        <div class="activity-marker"></div>
+                                        <div class="activity-body">
+                                            <p class="activity-title">Nexis Industrial OS Ready</p>
+                                            <p class="activity-time">Real-time local & Google Sheets sync active.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -238,7 +282,7 @@
                     <div class="view-header-row">
                         <div class="view-header">
                             <h1>Filament Spools</h1>
-                            <p class="subtitle">Manage 3D printing filaments, weights, and cabinet locations</p>
+                            <p class="subtitle">Manage 3D printing filaments, color swatches, stock counts, and drybox locations</p>
                         </div>
                         <div class="header-filters">
                             <select id="filter-spool-material" class="select-filter">
@@ -256,6 +300,13 @@
                                 <option value="low">Low Stock</option>
                                 <option value="empty">Out of Stock</option>
                             </select>
+                            <select id="sort-spools" class="select-filter" title="Sort Spools">
+                                <option value="default">Sort: Default</option>
+                                <option value="brand">Sort: Brand (A-Z)</option>
+                                <option value="material">Sort: Material</option>
+                                <option value="qty-asc">Sort: Qty (Low → High)</option>
+                                <option value="qty-desc">Sort: Qty (High → Low)</option>
+                            </select>
                             <button class="primary-btn" id="btn-add-spool">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 <span>Add Spool</span>
@@ -265,7 +316,6 @@
 
                     <!-- Spools Grid -->
                     <div class="spools-grid" id="spools-list-container">
-                        <!-- Spool cards populated dynamically by app.js -->
                         <div class="view-placeholder">
                             <span class="loader"></span>
                             <p>Loading your spool inventory...</p>
@@ -277,8 +327,8 @@
                 <section id="view-hardware" class="app-view">
                     <div class="view-header-row">
                         <div class="view-header">
-                            <h1>Hardware & Fasteners</h1>
-                            <p class="subtitle">Manage screws, nuts, inserts, bearings, and workshop fasteners</p>
+                            <h1>Hardware Array</h1>
+                            <p class="subtitle">Manage modular cabinet drawers, metric fasteners, inserts, bearings, and components</p>
                         </div>
                         <div class="header-filters">
                             <select id="filter-hardware-type" class="select-filter">
@@ -297,9 +347,11 @@
                                 <option value="M3">M3</option>
                                 <option value="M4">M4</option>
                                 <option value="M5">M5</option>
-                                <option value="Magnet">Magnet</option>
-                                <option value="NFC Card">NFC Card</option>
                                 <option value="other">Other/Non-metric</option>
+                            </select>
+                            <select id="filter-hardware-stock" class="select-filter">
+                                <option value="all">All Stock Levels</option>
+                                <option value="alert">Low / Out of Stock Only</option>
                             </select>
                             <button class="primary-btn" id="btn-add-hardware">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -309,25 +361,26 @@
                     </div>
 
                     <!-- Cabinet Storage Unit Grid Map -->
-                    <div id="hardware-cabinet-section" class="glass-panel cabinet-section-card purple-glow" style="padding: 24px; margin-bottom: 24px;">
+                    <div id="hardware-cabinet-section" class="glass-panel cabinet-section-card purple-glow">
                         <div class="cabinet-section-header">
                             <div>
                                 <h2 class="cabinet-title">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
-                                    <span>Cabinet Organizer Map (5x4 Drawer Grid)</span>
+                                    <span>Cabinet Organizer Map (5×4 Drawer Matrix)</span>
                                 </h2>
-                                <p class="cabinet-subtitle">Click an occupied box to filter the table, or click an empty box (+) to add new hardware.</p>
+                                <p class="cabinet-subtitle">Click an occupied drawer to isolate its contents below, or click an empty slot (+) to assign hardware.</p>
                             </div>
                             
-                            <!-- Dynamic selector rendered by JS -->
-                            <div id="cabinet-section-selector" class="cabinet-tab-row">
-                                <!-- Programmatically populated like: [Section A] [Section B] [Section C] etc. -->
-                            </div>
+                            <div id="cabinet-section-selector" class="cabinet-tab-row"></div>
                         </div>
 
                         <!-- Dynamic 5x4 Grid Container -->
-                        <div id="cabinet-grid-container" class="cabinet-grid">
-                            <!-- Drawers dynamically rendered by JS -->
+                        <div id="cabinet-grid-container" class="cabinet-grid"></div>
+
+                        <!-- Active Drawer Filter Banner -->
+                        <div id="cabinet-active-filter-bar" class="cabinet-filter-banner hidden">
+                            <span id="cabinet-active-filter-text">Filtered by Drawer A1</span>
+                            <button type="button" id="btn-clear-cabinet-filter" class="btn-text">Clear Drawer Filter &times;</button>
                         </div>
                     </div>
 
@@ -343,14 +396,13 @@
                                         <th class="text-center">Size (L/D)</th>
                                         <th class="text-center">Size (W)</th>
                                         <th class="text-center">Size (T)</th>
-                                        <th class="text-center">Qty</th>
-                                        <th class="text-center">Min Qty</th>
+                                        <th class="text-center">Stock Status & Qty</th>
+                                        <th class="text-center">Min Alert</th>
                                         <th>Remarks</th>
-                                        <th class="text-right">Actions</th>
+                                        <th class="text-right">Quick Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="hardware-list-tbody">
-                                    <!-- Dynamic rows loaded by JS -->
                                     <tr>
                                         <td colspan="10" class="text-center">
                                             <span class="loader"></span>
@@ -365,36 +417,46 @@
 
                 <!-- 4. TOOLS & HARDWARES VIEW -->
                 <section id="view-general" class="app-view">
-                    <header class="view-header">
-                        <div class="header-content">
-                            <h1 class="view-title">Tools & Hardwares</h1>
-                            <p class="view-subtitle">Track tools, electronics, adhesives, and general inventory</p>
+                    <div class="view-header-row">
+                        <div class="view-header">
+                            <h1>Tools & Hardwares</h1>
+                            <p class="subtitle">Custom modular tables for electronics, hand tools, sensors, adhesives, and workshop equipment</p>
                         </div>
-                        <div class="header-actions">
-                            <button id="btn-add-th-section" class="primary-btn" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); margin-right: 8px;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                        <div class="header-filters">
+                            <select id="filter-th-section" class="select-filter">
+                                <option value="all">All Sub-Sections</option>
+                            </select>
+                            <button id="btn-add-th-section" class="secondary-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                                 <span>New Sub-Section</span>
                             </button>
                             <button id="btn-add-th-item" class="primary-btn">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 <span>Add Product</span>
                             </button>
                         </div>
-                    </header>
+                    </div>
 
-                    <div id="th-sections-container" style="margin-top: 24px;">
+                    <div id="th-sections-container" class="th-sections-stack">
                         <!-- Dynamic sub-sections will be rendered here -->
                     </div>
                 </section>
 
                 <!-- 5. PROJECT PLANNER VIEW (BOM Centric) -->
                 <section id="view-projects" class="app-view">
-                    <div class="view-header-row" style="align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px;">
+                    <div class="view-header-row">
                         <div class="view-header">
-                            <h1>Project Planner</h1>
-                            <p class="subtitle">Track Bills of Materials (BOM) and plan project purchases</p>
+                            <h1>Project Planner & BOM</h1>
+                            <p class="subtitle">Track project Bills of Materials (BOM), separate owned vs. required parts, and calculate costs in AED</p>
                         </div>
                         <div class="header-filters">
+                            <select id="filter-project-status" class="select-filter">
+                                <option value="all">All Project Statuses</option>
+                                <option value="Planning">Planning</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
                             <button class="primary-btn" id="btn-add-project">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 <span>New Project</span>
@@ -402,8 +464,42 @@
                         </div>
                     </div>
 
+                    <!-- Project Summary KPI Strip -->
+                    <div class="stats-grid project-kpi-grid">
+                        <div class="stat-card glass-panel purple-glow">
+                            <div class="stat-icon-wrapper purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Total Projects</h3>
+                                <div class="stat-number" id="proj-stat-total">0</div>
+                                <span class="stat-label">Active & planned builds</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel blue-glow">
+                            <div class="stat-icon-wrapper blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                            </div>
+                            <div class="stat-details">
+                                <h3>In Progress</h3>
+                                <div class="stat-number" id="proj-stat-active">0</div>
+                                <span class="stat-label">Currently on workbench</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel amber-glow">
+                            <div class="stat-icon-wrapper amber">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Estimated BOM Spend</h3>
+                                <div class="stat-number" id="proj-stat-spend">AED 0.00</div>
+                                <span class="stat-label" id="proj-stat-buy-count">0 items to purchase</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Projects Grid Board -->
-                    <div id="projects-list-container" style="display: flex; flex-direction: column; gap: 32px; margin-top: 16px;">
+                    <div id="projects-list-container" class="projects-stack">
                         <div class="view-placeholder">
                             <span class="loader"></span>
                             <p>Loading projects...</p>
@@ -411,30 +507,30 @@
                     </div>
                 </section>
 
-                <!-- 5. GOOGLE SHEETS SYNC VIEW -->
+                <!-- 6. GOOGLE SHEETS SYNC VIEW -->
                 <section id="view-sync" class="app-view">
                     <div class="view-header">
-                        <h1>Google Sheets Integration</h1>
-                        <p class="subtitle">Import your spreadsheet inventory data or export updates back to Sheets</p>
+                        <h1>Google Sheets Cloud Integration</h1>
+                        <p class="subtitle">Bi-directional real-time database synchronization and CSV backup tools</p>
                     </div>
 
                     <!-- Real-Time Cloud database integration -->
-                    <div class="glass-panel cloud-sync-card purple-glow" style="padding: 28px; margin-bottom: 32px; display: flex; flex-direction: column; gap: 20px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-                            <div style="display: flex; align-items: center; gap: 16px;">
+                    <div class="glass-panel cloud-sync-card purple-glow">
+                        <div class="cloud-sync-top-row">
+                            <div class="cloud-sync-title-group">
                                 <div class="icon-bubble purple" id="cloud-sync-status-icon">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
                                     </svg>
                                 </div>
                                 <div>
-                                    <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Live Google Sheets Cloud Database</h2>
-                                    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;" id="cloud-sync-status-text">Status: Local storage mode (database disconnected)</p>
+                                    <h2>Live Google Sheets Cloud Database</h2>
+                                    <p id="cloud-sync-status-text">Status: Local storage mode (database disconnected)</p>
                                 </div>
                             </div>
                             <!-- Auto-sync toggle switch -->
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <span style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Real-Time Auto-Sync</span>
+                            <div class="auto-sync-toggle-wrap">
+                                <span>Real-Time Auto-Sync</span>
                                 <div class="switch-container">
                                     <input type="checkbox" id="cloud-auto-sync-toggle" class="switch-checkbox" style="display: none;">
                                     <label class="switch-slider" for="cloud-auto-sync-toggle"></label>
@@ -442,13 +538,13 @@
                             </div>
                         </div>
 
-                        <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; width: 100%;">
+                        <div class="cloud-sync-controls-row">
                             <div class="form-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
-                                <label for="cloud-api-url" style="color: var(--text-secondary); font-size: 12px;">Google Apps Script Web App URL</label>
-                                <input type="text" id="cloud-api-url" placeholder="https://script.google.com/macros/s/.../exec" style="width: 100%;">
+                                <label for="cloud-api-url">Google Apps Script Web App URL</label>
+                                <input type="text" id="cloud-api-url" placeholder="https://script.google.com/macros/s/.../exec">
                             </div>
-                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                <button class="primary-btn" id="btn-cloud-pull" style="box-shadow: none;">
+                            <div class="cloud-sync-btn-group">
+                                <button class="primary-btn" id="btn-cloud-pull">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                                     <span>Fetch from Sheets</span>
                                 </button>
@@ -467,13 +563,13 @@
                                 <div class="icon-bubble blue">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                                 </div>
-                                <h2>Import CSV from Sheets</h2>
+                                <h2>Import CSV Data</h2>
                             </div>
-                            <p class="card-desc">Export your Google Sheets inventory tab as a **CSV (Comma Separated Values)** file, then copy its text or drag the file below to populate this app.</p>
+                            <p class="card-desc">Export your Google Sheets inventory tab as a <strong>CSV (Comma Separated Values)</strong> file, then paste its text or drop the file below.</p>
 
                             <div class="form-group">
-                                <label>Copy & Paste CSV Data:</label>
-                                <textarea id="csv-import-text" placeholder="Paste Google Sheet CSV content here...&#10;e.g. Brand,Material,Color,HexCode,Quantity,ReorderLimit,Shelf&#10;Prusament,PLA,Galaxy Black,#111111,2,1,A1"></textarea>
+                                <label for="csv-import-text">Copy & Paste CSV Data:</label>
+                                <textarea id="csv-import-text" placeholder="Paste Google Sheet CSV content here...&#10;e.g. Brand,Material,Color,HexCode,Quantity,ReorderLimit,Location&#10;Prusament,PLA,Galaxy Black,#111111,2,1,A1"></textarea>
                             </div>
 
                             <div class="or-separator"><span>OR</span></div>
@@ -484,10 +580,10 @@
                                 <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
                             </div>
 
-                            <div class="sync-actions">
+                            <div class="sync-actions" style="margin-top: 20px;">
                                 <button class="primary-btn full-width" id="btn-run-import">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 10 18 10 18 6"></polyline><path d="M12 20c4.4 0 8-3.6 8-8V10h-2"></path><path d="M22 10c0-4.4-3.6-8-8-8a8 8 0 0 0-8 8v2"></path><polyline points="2 14 6 14 6 18"></polyline><path d="M12 4c-4.4 0-8 3.6-8 8v2h2"></path></svg>
-                                    <span>Sync & Overwrite Local Database</span>
+                                    <span>Import & Merge CSV Data</span>
                                 </button>
                             </div>
                         </div>
@@ -498,15 +594,15 @@
                                 <div class="icon-bubble purple">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 </div>
-                                <h2>Export to Google Sheets</h2>
+                                <h2>Export & Backup</h2>
                             </div>
-                            <p class="card-desc">Download your updated spool and hardware inventory datasets as clean, standardized CSV files that you can import directly back into Google Sheets.</p>
+                            <p class="card-desc">Download your updated inventory datasets as clean, standardized CSV files or full JSON backups.</p>
 
                             <div class="export-options">
                                 <div class="export-box">
                                     <div class="export-box-info">
                                         <h4>Filament Spools CSV</h4>
-                                        <p id="spools-export-meta">0 spools in queue</p>
+                                        <p id="spools-export-meta">0 spools in database</p>
                                     </div>
                                     <button class="secondary-btn" id="btn-export-spools">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -517,7 +613,7 @@
                                 <div class="export-box">
                                     <div class="export-box-info">
                                         <h4>Hardware & Fasteners CSV</h4>
-                                        <p id="hardware-export-meta">0 items in queue</p>
+                                        <p id="hardware-export-meta">0 items in database</p>
                                     </div>
                                     <button class="secondary-btn" id="btn-export-hardware">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -527,9 +623,9 @@
                             </div>
 
                             <div class="sync-instructions">
-                                <h3>💡 Recommended Columns</h3>
-                                <p>To ensure perfect visual rendering and mapping, keep your Google Sheets columns named similarly to these headers:</p>
+                                <h3>Standardized Schema Columns</h3>
                                 <div class="code-badges">
+                                    <span class="code-badge">ID</span>
                                     <span class="code-badge">Brand</span>
                                     <span class="code-badge">Material</span>
                                     <span class="code-badge">Color</span>
@@ -543,7 +639,7 @@
 
                             <div class="sync-actions" style="margin-top: auto; padding-top: 15px;">
                                 <button class="secondary-btn full-width" id="btn-load-mock-data">
-                                    <span>⚡ Load Premium Mock Demo Data</span>
+                                    <span>⚡ Load Industrial Demo Pack</span>
                                 </button>
                             </div>
                         </div>
@@ -556,12 +652,12 @@
 
     <!-- ==================== FORM DIALOGS (MODALS) ==================== -->
 
-    <!-- SPOOL ADD/EDIT MODAL -->
+    <!-- 1. SPOOL ADD/EDIT MODAL -->
     <dialog class="custom-modal" id="modal-spool">
         <div class="modal-content glass-panel">
             <div class="modal-header">
                 <h2 id="modal-spool-title">Add New Filament Spool</h2>
-                <button class="modal-close" id="btn-close-spool-modal">
+                <button type="button" class="modal-close" id="btn-close-spool-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -571,35 +667,37 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="spool-brand">Brand / Manufacturer *</label>
-                        <input type="text" id="spool-brand" placeholder="e.g., Polymaker, Prusament, Hatchbox" required>
+                        <input type="text" id="spool-brand" placeholder="e.g., Polymaker, eSUN, Bambu Lab" required>
                     </div>
                     <div class="form-group">
                         <label for="spool-material">Material *</label>
-                        <select id="spool-material" required>
-                            <option value="PLA">PLA</option>
-                            <option value="PETG">PETG</option>
-                            <option value="ABS">ABS</option>
-                            <option value="ASA">ASA</option>
-                            <option value="TPU">TPU</option>
-                            <option value="Nylon">Nylon</option>
-                            <option value="PET">PET</option>
-                            <option value="PC">PC (Polycarbonate)</option>
-                            <option value="PVA">PVA (Support)</option>
-                            <option value="Other">Other</option>
-                        </select>
+                        <input type="text" id="spool-material" list="spool-material-list" placeholder="e.g., PLA+, PETG, ABS, ASA" required>
+                        <datalist id="spool-material-list">
+                            <option value="PLA">
+                            <option value="PLA+">
+                            <option value="PLA Pro">
+                            <option value="PLA Matte">
+                            <option value="PETG">
+                            <option value="ABS">
+                            <option value="ASA">
+                            <option value="TPU">
+                            <option value="Nylon">
+                            <option value="PC">
+                            <option value="Other">
+                        </datalist>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="spool-color">Color Name *</label>
-                        <input type="text" id="spool-color" placeholder="e.g., Galaxy Black, Neon Green, Pastel Blue" required>
+                        <input type="text" id="spool-color" placeholder="e.g., Galaxy Black, Jade Green, Bone White" required>
                     </div>
                     <div class="form-group">
                         <label for="spool-hex">Visual Color (Hex Code)</label>
                         <div class="color-input-wrapper">
-                            <input type="color" id="spool-color-picker" value="#3b82f6">
-                            <input type="text" id="spool-hex" placeholder="#3b82f6" value="#3b82f6">
+                            <input type="color" id="spool-color-picker" value="#6366f1">
+                            <input type="text" id="spool-hex" placeholder="#6366f1" value="#6366f1">
                         </div>
                     </div>
                 </div>
@@ -615,16 +713,14 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="spool-location">Storage Location / Shelf</label>
-                        <input type="text" id="spool-location" placeholder="e.g., Drybox A, Shelf 2">
-                    </div>
+                <div class="form-group">
+                    <label for="spool-location">Storage Location / Drybox / Cabinet</label>
+                    <input type="text" id="spool-location" placeholder="e.g., Drybox A, Shelf 2, AMS Slot 1">
                 </div>
 
                 <div class="form-group">
                     <label for="spool-notes">Notes / Print Profiles</label>
-                    <textarea id="spool-notes" rows="2" placeholder="e.g., Print temp 210°C, highly hygroscopic, beautiful silk finish"></textarea>
+                    <textarea id="spool-notes" rows="2" placeholder="e.g., Print temp 215°C, bed 60°C, flow ratio 0.98"></textarea>
                 </div>
 
                 <div class="modal-footer">
@@ -635,12 +731,12 @@
         </div>
     </dialog>
 
-    <!-- HARDWARE ADD/EDIT MODAL -->
+    <!-- 2. HARDWARE ADD/EDIT MODAL -->
     <dialog class="custom-modal" id="modal-hardware">
         <div class="modal-content glass-panel">
             <div class="modal-header">
                 <h2 id="modal-hardware-title">Add New Hardware Item</h2>
-                <button class="modal-close" id="btn-close-hardware-modal">
+                <button type="button" class="modal-close" id="btn-close-hardware-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -649,18 +745,20 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="hw-boxNo">Box No. / Location *</label>
+                        <label for="hw-boxNo">Box No. / Drawer *</label>
                         <input type="text" id="hw-boxNo" placeholder="e.g., A1, B12, C4" required>
                     </div>
                     <div class="form-group">
                         <label for="hw-category">Category *</label>
-                        <input type="text" id="hw-category" list="category-suggestions" placeholder="e.g., Magnet, Threaded Insert, NFC Card" required>
+                        <input type="text" id="hw-category" list="category-suggestions" placeholder="e.g., Magnet, Threaded Insert, SHCS" required>
                         <datalist id="category-suggestions">
                             <option value="Magnet">
                             <option value="Threaded Insert">
                             <option value="NFC Card">
                             <option value="Limit Switch">
                             <option value="Screw">
+                            <option value="SHCS">
+                            <option value="BHCS">
                             <option value="Nut">
                             <option value="Bearing">
                             <option value="Washer">
@@ -672,21 +770,21 @@
 
                 <div class="form-group">
                     <label for="hw-specification">Specification *</label>
-                    <input type="text" id="hw-specification" placeholder="e.g., M3, NFC Card Standard, 608ZZ" required>
+                    <input type="text" id="hw-specification" placeholder="e.g., M3, 608ZZ, Neodymium N52" required>
                 </div>
 
-                <div class="form-row">
+                <div class="form-row form-row-3">
                     <div class="form-group">
-                        <label for="hw-sizeLD">Size: Length / Diameter (mm)</label>
-                        <input type="text" id="hw-sizeLD" placeholder="e.g., 6, 4.2, 25 or N/A">
+                        <label for="hw-sizeLD">Length / Dia (mm)</label>
+                        <input type="text" id="hw-sizeLD" placeholder="e.g., 6, 4.2, 25">
                     </div>
                     <div class="form-group">
-                        <label for="hw-sizeW">Size: Width (mm)</label>
-                        <input type="text" id="hw-sizeW" placeholder="e.g., 5.8 (leave blank if empty)">
+                        <label for="hw-sizeW">Width (mm)</label>
+                        <input type="text" id="hw-sizeW" placeholder="e.g., 5.8">
                     </div>
                     <div class="form-group">
-                        <label for="hw-sizeT">Size: Thickness / Height (mm)</label>
-                        <input type="text" id="hw-sizeT" placeholder="e.g., 3, 4, 6.5">
+                        <label for="hw-sizeT">Thickness / Ht (mm)</label>
+                        <input type="text" id="hw-sizeT" placeholder="e.g., 3, 4">
                     </div>
                 </div>
 
@@ -694,18 +792,18 @@
                     <div class="form-group">
                         <label for="hw-qty">Quantity in Stock *</label>
                         <input type="text" id="hw-qty" placeholder="e.g., 45, 100+" required>
-                        <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Supports numbers (45) and string indicators (100+).</span>
+                        <span class="field-help">Supports exact numbers (45) or bulk indicators (100+).</span>
                     </div>
                     <div class="form-group">
                         <label for="hw-minQty">Minimum Alert Quantity *</label>
-                        <input type="number" id="hw-minQty" min="0" placeholder="e.g., 10, 20" value="10" required>
-                        <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Triggers a warning when stock drops below this.</span>
+                        <input type="number" id="hw-minQty" min="0" placeholder="e.g., 10" value="10" required>
+                        <span class="field-help">Triggers low stock warning when count drops to or below this.</span>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="hw-remarks">Remarks</label>
-                    <input type="text" id="hw-remarks" placeholder="e.g., Sticker type, brass finish">
+                    <label for="hw-remarks">Remarks / Finish</label>
+                    <input type="text" id="hw-remarks" placeholder="e.g., Brass knurled heat-set, Black oxide alloy steel">
                 </div>
 
                 <div class="modal-footer">
@@ -716,12 +814,12 @@
         </div>
     </dialog>
 
-    <!-- TOOLS & HARDWARES ADD/EDIT SUB-SECTION MODAL -->
+    <!-- 3. TOOLS & HARDWARES ADD/EDIT SUB-SECTION MODAL -->
     <dialog class="custom-modal" id="modal-th-section">
-        <div class="modal-content glass-panel" style="width: 500px; max-width: 95vw;">
+        <div class="modal-content glass-panel">
             <div class="modal-header">
-                <h3 id="modal-th-section-title" style="margin:0; font-family:var(--font-heading);">Create Sub-Section</h3>
-                <button type="button" class="btn-icon" id="btn-close-th-section-modal">
+                <h2 id="modal-th-section-title">Create Sub-Section</h2>
+                <button type="button" class="modal-close" id="btn-close-th-section-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -731,36 +829,37 @@
                 
                 <div class="form-group">
                     <label for="th-section-name">Sub-Section Name *</label>
-                    <input type="text" id="th-section-name" class="modal-input" placeholder="e.g. Screws, Measuring Tools, Adhesives" required>
+                    <input type="text" id="th-section-name" placeholder="e.g., Electronics, Microcontrollers, Measuring Tools" required>
                 </div>
 
                 <div class="form-group" style="margin-top: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div class="th-columns-header-bar">
                         <label style="margin: 0;">Column Headings *</label>
-                        <button type="button" class="btn-text" id="btn-add-th-column" style="font-size: 0.85em; padding: 4px 8px;">
-                            + Add Column
+                        <button type="button" class="btn-text" id="btn-add-th-column">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <span>Add Column</span>
                         </button>
                     </div>
-                    <div id="th-columns-container">
+                    <div id="th-columns-container" class="th-columns-list">
                         <!-- Column inputs added dynamically -->
                     </div>
-                    <p style="font-size: 0.8em; color: var(--text-muted); margin-top: 8px;">Add the columns you want for this section's table (e.g. Name, Description, Qty, Storage Bin).</p>
+                    <span class="field-help">Tip: Include a "Qty" column to enable automatic stock steppers, and "Min Qty" for low-stock alerts.</span>
                 </div>
 
-                <div class="modal-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
-                    <button type="button" class="btn-text" id="btn-cancel-th-section">Cancel</button>
-                    <button type="submit" class="primary-btn">Save Section</button>
+                <div class="modal-footer">
+                    <button type="button" class="secondary-btn" id="btn-cancel-th-section">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Sub-Section</button>
                 </div>
             </form>
         </div>
     </dialog>
 
-    <!-- TOOLS & HARDWARES ADD/EDIT PRODUCT MODAL -->
+    <!-- 4. TOOLS & HARDWARES ADD/EDIT PRODUCT MODAL -->
     <dialog class="custom-modal" id="modal-th-item">
-        <div class="modal-content glass-panel" style="width: 500px; max-width: 95vw;">
+        <div class="modal-content glass-panel">
             <div class="modal-header">
-                <h3 id="modal-th-item-title" style="margin:0; font-family:var(--font-heading);">Add Product</h3>
-                <button type="button" class="btn-icon" id="btn-close-th-item-modal">
+                <h2 id="modal-th-item-title">Add Product</h2>
+                <button type="button" class="modal-close" id="btn-close-th-item-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -770,43 +869,54 @@
                 
                 <div class="form-group">
                     <label for="th-item-section">Target Sub-Section *</label>
-                    <select id="th-item-section" class="modal-input" required>
+                    <select id="th-item-section" required>
                         <!-- Populated by JS -->
                     </select>
                 </div>
 
-                <div id="th-item-fields-container" style="margin-top: 16px;">
+                <div id="th-item-fields-container" class="th-dynamic-fields">
                     <!-- Dynamically generated fields based on selected section columns -->
                 </div>
 
-                <div class="modal-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
-                    <button type="button" class="btn-text" id="btn-cancel-th-item">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="secondary-btn" id="btn-cancel-th-item">Cancel</button>
                     <button type="submit" class="primary-btn">Save Product</button>
                 </div>
             </form>
         </div>
     </dialog>
 
-    <!-- PROJECT ADD/EDIT DIALOG MODAL -->
-    <dialog class="custom-modal" id="modal-project" style="max-width: 680px;">
-        <div class="modal-content glass-panel" style="max-height: 90vh; overflow-y: auto;">
+    <!-- 5. PROJECT ADD/EDIT DIALOG MODAL -->
+    <dialog class="custom-modal" id="modal-project">
+        <div class="modal-content glass-panel">
             <div class="modal-header">
                 <h2 id="modal-project-title">Add New Project</h2>
-                <button class="modal-close" id="btn-close-project-modal">
+                <button type="button" class="modal-close" id="btn-close-project-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
             <form id="form-project" method="dialog">
                 <input type="hidden" id="project-id">
-                <div class="form-group">
-                    <label for="proj-name">Project Name *</label>
-                    <input type="text" id="proj-name" placeholder="e.g., Voron 2.4 Build, Custom FPV Drone" required>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="proj-name">Project Name *</label>
+                        <input type="text" id="proj-name" placeholder="e.g., Voron 2.4 Build, Custom FPV Drone" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="proj-status">Status</label>
+                        <select id="proj-status">
+                            <option value="Planning">Planning</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="proj-description">Project Description</label>
-                    <textarea id="proj-description" rows="3" placeholder="Describe the goal and scope of this project..."></textarea>
+                    <label for="proj-description">Project Description & Scope</label>
+                    <textarea id="proj-description" rows="3" placeholder="Describe the build specifications, target goals, or notes..."></textarea>
                 </div>
-                <div class="modal-footer" style="margin-top: 24px; padding-top: 16px;">
+                <div class="modal-footer">
                     <button type="button" class="secondary-btn" id="btn-cancel-project">Cancel</button>
                     <button type="submit" class="primary-btn" id="btn-save-project">Save Project</button>
                 </div>
@@ -814,12 +924,12 @@
         </div>
     </dialog>
 
-    <!-- BOM ITEM ADD/EDIT DIALOG MODAL -->
-    <dialog class="custom-modal" id="modal-bom-item" style="max-width: 680px;">
+    <!-- 6. BOM ITEM ADD/EDIT DIALOG MODAL -->
+    <dialog class="custom-modal" id="modal-bom-item" style="max-width: 640px;">
         <div class="modal-content glass-panel" style="max-height: 90vh; overflow-y: auto;">
             <div class="modal-header">
                 <h2 id="modal-bom-item-title">Add BOM Item</h2>
-                <button class="modal-close" id="btn-close-bom-item-modal">
+                <button type="button" class="modal-close" id="btn-close-bom-item-modal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -830,16 +940,16 @@
                 <div class="form-row">
                     <div class="form-group" style="flex:2;">
                         <label for="bom-name">Item Name *</label>
-                        <input type="text" id="bom-name" placeholder="e.g., Flight Controller" required>
+                        <input type="text" id="bom-name" placeholder="e.g., BIGTREETECH Octopus V1.1, Linear Rail MGN12H" required>
                     </div>
                     <div class="form-group" style="flex:1;">
                         <label for="bom-qty">Qty *</label>
-                        <input type="number" id="bom-qty" min="1" value="1" placeholder="1">
+                        <input type="number" id="bom-qty" min="1" value="1" placeholder="1" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group" style="flex:1;">
-                        <label for="bom-status">Purchase Status *</label>
+                        <label for="bom-status">Inventory Status *</label>
                         <select id="bom-status" required>
                             <option value="Have it already">Have it already</option>
                             <option value="Need to purchase">Need to purchase</option>
@@ -852,41 +962,41 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="bom-specification">Specification</label>
-                    <input type="text" id="bom-specification" placeholder="e.g., 30.5x30.5mm mounting, 5V/3A BEC">
+                    <label for="bom-specification">Technical Specification</label>
+                    <input type="text" id="bom-specification" placeholder="e.g., 30.5x30.5mm mounting, 350mm length, 24V">
                 </div>
 
                 <div class="form-group">
-                    <label for="bom-link">Product / Store Link</label>
-                    <input type="url" id="bom-link" placeholder="https://store.example.com/item">
+                    <label for="bom-link">Product / Supplier Link (Amazon, AliExpress, DigiKey...)</label>
+                    <input type="url" id="bom-link" placeholder="https://...">
                 </div>
 
                 <div class="form-group">
-                    <label for="bom-photoUrl">Photo URL or Attach File</label>
-                    <input type="text" id="bom-photoUrl" placeholder="Image URL (optional)">
-                    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center;">
+                    <label for="bom-photoUrl">Product Photo (URL or Local Upload)</label>
+                    <input type="text" id="bom-photoUrl" placeholder="Paste image URL or attach local file below">
+                    <div class="bom-upload-bar">
                         <input type="file" id="bom-image-file" accept="image/*" style="display: none;">
-                        <button type="button" class="secondary-btn" id="btn-upload-bom-image" style="padding: 6px 12px; font-size: 12px;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            Attach Local Image
+                        <button type="button" class="secondary-btn btn-sm" id="btn-upload-bom-image">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <span>Attach Local Image</span>
                         </button>
-                        <span id="bom-image-upload-status" style="font-size: 11px; color: var(--text-muted);">No file attached</span>
+                        <span id="bom-image-upload-status" class="field-help" style="margin:0;">No file attached</span>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="bom-description">Notes / Description</label>
-                    <textarea id="bom-description" rows="2" placeholder="Any additional notes about this item..."></textarea>
+                    <label for="bom-description">Notes / Remarks</label>
+                    <textarea id="bom-description" rows="2" placeholder="Optional supplier notes, lead time, or alternatives..."></textarea>
                 </div>
 
-                <div class="modal-footer" style="margin-top: 24px; padding-top: 16px;">
+                <div class="modal-footer">
                     <button type="button" class="secondary-btn" id="btn-cancel-bom-item">Cancel</button>
-                    <button type="submit" class="primary-btn" id="btn-save-bom-item">Save Item</button>
+                    <button type="submit" class="primary-btn" id="btn-save-bom-item">Save BOM Item</button>
                 </div>
             </form>
         </div>
     </dialog>
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>
